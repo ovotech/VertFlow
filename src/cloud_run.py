@@ -1,9 +1,21 @@
 import logging
+from collections.abc import Callable
+from time import sleep
 from typing import Optional
 
-from google.api_core import client_options
+from google.api_core.client_options import ClientOptions
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
+
+
+def wait_until(condition: Callable[..., bool], timeout_seconds: int, wait_interval_seconds: int = 5, *args, **kwargs):
+    sleep(wait_interval_seconds)
+    waited_for_seconds = wait_interval_seconds
+    while not condition(*args, **kwargs):
+        if waited_for_seconds > timeout_seconds:
+            raise RuntimeError(f"Timeout exceeded waiting for condition {condition.__code__}")
+        sleep(wait_interval_seconds)
+        waited_for_seconds += wait_interval_seconds
 
 
 class CloudRunJob:
@@ -16,18 +28,20 @@ class CloudRunJob:
         :param region: The region in which to run the Cloud Run Job
         """
 
+        self.__max_retries = None
+        self.__run_timeout_seconds = None
         self.project_id = project_id
         self.name = name
         self.region = region
 
-        self.__gcp_client = build('run', 'v1', client_options=client_options.ClientOptions(
+        self.__gcp_client = build('run', 'v1', client_options=ClientOptions(
             api_endpoint=f"https://{self.region}-run.googleapis.com"))
 
         self.job_address = f"namespaces/{self.project_id}/jobs/{self.name}"
-        self.specification = self.__get()
         self.__execution_id = None
 
-    def __get(self) -> Optional[dict]:
+    @property
+    def specification(self) -> Optional[dict]:
         """
         Get the specification of the job with the given name in the given region and project on Cloud Run.
         :return: The job spec as JSON, or None if the job does not exist.
@@ -47,7 +61,7 @@ class CloudRunJob:
         """
         if self.specification:
             self.__gcp_client.namespaces().jobs().delete(name=self.job_address).execute()
-        self.specification = None
+        wait_until(lambda: self.specification is None, 60)
 
     def create(self,
                annotations: dict,
@@ -59,12 +73,14 @@ class CloudRunJob:
                port_number: int,
                max_retries: int,
                timeout_seconds: int,
+               initialisation_timeout_seconds: int,
                service_account_email_address: str,
                cpu_limit: int,
                memory_limit: str
                ) -> None:
         """
         Create a Cloud Run Job with the given specification in the given project. Job may then be executed with CloudRunJob.run().
+
         :param cpu_limit: Max number of CPUs to assign to the container.
         :param memory_limit: A fixed or floating point number followed by a unit: G or M corresponding to gigabyte or megabyte, respectively, or use the power-of-two equivalents: Gi or Mi corresponding to gibibyte or mebibyte respectively.
         :param annotations: Annotations is an unstructured key value map stored with a resource that may be set by external tools to store and retrieve arbitrary metadata. More info: https://kubernetes.io/docs/user-guide/annotations. A dictionary of annotation key-value pairs, e.g. { "name": "wrench", "mass": "1.3kg", "count": "3" }
@@ -76,9 +92,13 @@ class CloudRunJob:
         :param port_number: TCP port to expose from the container. The specified port must be listening on all interfaces (0.0.0.0) within the container to be accessible. If omitted, a port number will be chosen and passed to the container through the PORT environment variable for the container to listen on.
         :param max_retries: Number of retries allowed per task, before marking this job failed.
         :param timeout_seconds: Duration in seconds the task may be active before the system will actively try to mark it failed and kill associated containers. This applies per attempt of a task, meaning each retry can run for the full timeout.
+        :param initialisation_timeout_seconds: Duration in seconds to wait for the job to be in a Ready state on Cloud Run. https://cloud.google.com/run/docs/reference/rest/v1/Condition
         :param service_account_email_address: Email address of the IAM service account associated with the task of a job execution. The service account represents the identity of the running task, and determines what permissions the task has.
         :return:
         """
+
+        self.__run_timeout_seconds = timeout_seconds
+        self.__max_retries = max_retries
 
         if self.specification is not None:
             logging.warning(
@@ -133,18 +153,23 @@ class CloudRunJob:
                 }
             }
         }
-        logging.info("Creating Cloud Run Job.")
-        self.specification = self.__gcp_client.namespaces().jobs().create(parent=f"namespaces/{self.project_id}",
-                                                                          body=job_config).execute()
-        logging.info("✅ Created Cloud Run Job.")
+        self.__gcp_client.namespaces().jobs().create(parent=f"namespaces/{self.project_id}",
+                                                     body=job_config).execute()
+
+        wait_until(self.is_build_complete, initialisation_timeout_seconds)
+
+    def is_build_complete(self) -> bool:
+        return self.specification["status"]["conditions"][0]["status"] == "True"
 
     def run(self) -> None:
         """
-        Run the job. Does not wait for completion - Check `self.execution` for details.
+        Run the job and wait for completion.
         :return: None
         """
         execution = self.__gcp_client.namespaces().jobs().run(name=self.job_address).execute()
         self.__execution_id = f"namespaces/{execution['metadata']['namespace']}/executions/{execution['metadata']['name']}"
+
+        wait_until(self.is_run_complete, self.__run_timeout_seconds * self.__max_retries)
 
     @property
     def execution(self) -> dict:
@@ -156,6 +181,11 @@ class CloudRunJob:
         return self.__gcp_client.namespaces().executions().get(name=self.__execution_id).execute() \
             if self.__execution_id \
             else None
+
+    def is_run_complete(self) -> bool:
+        return \
+            next(condition for condition in self.execution["status"]["conditions"] if condition["type"] == "Completed")[
+                "status"] == "True"
 
     def cancel(self) -> None:
         """

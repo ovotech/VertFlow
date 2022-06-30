@@ -36,7 +36,7 @@ Provide:
 
 ```python
 from airflow import DAG
-from VertFlow import VertFlowOperator
+from src import VertFlowOperator
 
 with DAG(
         dag_id="hourly_dag_in_green_region",
