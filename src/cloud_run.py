@@ -1,3 +1,19 @@
+"""
+Copyright 2022 OVO Energy Ltd
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+   http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
+
 import logging
 from collections.abc import Callable
 from time import sleep
@@ -13,9 +29,29 @@ def wait_until(condition: Callable[..., bool], timeout_seconds: int, wait_interv
     waited_for_seconds = wait_interval_seconds
     while not condition(*args, **kwargs):
         if waited_for_seconds > timeout_seconds:
-            raise RuntimeError(f"Timeout exceeded waiting for condition {condition.__code__}")
+            raise TimeoutError(f"Timeout exceeded waiting for condition: {condition.__code__}")
         sleep(wait_interval_seconds)
         waited_for_seconds += wait_interval_seconds
+
+
+class Specification:
+    def __init__(self, spec: Optional[dict]):
+        self.spec = spec
+
+    def __eq__(self, other: 'Specification'):
+
+        if self.spec and other.spec:
+            logging.debug(f"Comparing specification {self.spec} with {other.spec}...")
+            are_equal = (self.spec["spec"]["template"]["spec"]["template"]["spec"] ==
+                         other.spec["spec"]["template"]["spec"]["template"]["spec"]) & \
+                        (self.spec["metadata"]["name"] == other.spec["metadata"]["name"]) & \
+                        (self.spec["spec"]["template"]["metadata"]["annotations"] ==
+                         other.spec["spec"]["template"]["metadata"]["annotations"])
+            logging.debug(f"Specifications equal: {are_equal}")
+
+            return are_equal
+        else:
+            return (self.spec is None) == (other.spec is None)
 
 
 class CloudRunJob:
@@ -100,15 +136,11 @@ class CloudRunJob:
         self.__run_timeout_seconds = timeout_seconds
         self.__max_retries = max_retries
 
-        if self.specification is not None:
-            logging.warning(
-                "A Cloud Run Job already exists with this name in this project and region. It will be overwritten.")
-            self.delete()
-
         # While Cloud Run jobs is in pre-release, explicitly allow use of this Launch Stage. https://cloud.google.com/run/docs/troubleshooting#launch-stage-validation
-        annotations = annotations | {"run.googleapis.com/launch-stage": "BETA"}
+        annotations = annotations | {"run.googleapis.com/launch-stage": "BETA",
+                                     "run.googleapis.com/execution-environment": "gen2"}
 
-        job_config = {
+        new_specification = {
             "apiVersion": "run.googleapis.com/v1",
             "kind": "Job",
             "metadata": {
@@ -138,8 +170,7 @@ class CloudRunJob:
                                         "workingDir": working_directory,
                                         "ports": [
                                             {
-                                                "containerPort": port_number,
-                                                "protocol": "TCP"
+                                                "containerPort": port_number
                                             }
                                         ],
                                     }
@@ -153,10 +184,21 @@ class CloudRunJob:
                 }
             }
         }
-        self.__gcp_client.namespaces().jobs().create(parent=f"namespaces/{self.project_id}",
-                                                     body=job_config).execute()
 
-        wait_until(self.is_build_complete, initialisation_timeout_seconds)
+        if Specification(self.specification) == Specification(new_specification):
+            logging.warning(
+                "A Cloud Run Job already exists with an identical specification. No action taken.")
+
+        else:
+            if self.specification:
+                logging.warning(
+                    "A Cloud Run Job already exists with this name in this project and region. "
+                    "It will be overwritten with the new specification provided.")
+                self.delete()
+
+            self.__gcp_client.namespaces().jobs().create(parent=f"namespaces/{self.project_id}",
+                                                         body=new_specification).execute()
+            wait_until(self.is_build_complete, initialisation_timeout_seconds)
 
     def is_build_complete(self) -> bool:
         return self.specification["status"]["conditions"][0]["status"] == "True"
@@ -169,10 +211,10 @@ class CloudRunJob:
         execution = self.__gcp_client.namespaces().jobs().run(name=self.job_address).execute()
         self.__execution_id = f"namespaces/{execution['metadata']['namespace']}/executions/{execution['metadata']['name']}"
 
-        wait_until(self.is_run_complete, self.__run_timeout_seconds * self.__max_retries)
+        wait_until(self.run_completed, self.__run_timeout_seconds * self.__max_retries)
 
     @property
-    def execution(self) -> dict:
+    def execution(self) -> Optional[dict]:
         """
         Get details of the most recent execution of the job.
         :return: A dictionary of execution metadata, or None if the job has not been executed since the local
@@ -182,10 +224,27 @@ class CloudRunJob:
             if self.__execution_id \
             else None
 
-    def is_run_complete(self) -> bool:
+    @property
+    def execution_log_uri(self) -> Optional[str]:
+        return self.execution["status"]["logUri"] if self.execution else None
+
+    def __execution_completed(self) -> Optional[str]:
         return \
             next(condition for condition in self.execution["status"]["conditions"] if condition["type"] == "Completed")[
-                "status"] == "True"
+                "status"] if self.execution else None
+
+    def run_completed(self) -> bool:
+        """
+        Returns True if the job has finished running (successfully or otherwise).
+        """
+        return self.__execution_completed() in ("True", "False")
+
+    @property
+    def run_completed_successfully(self) -> bool:
+        """
+        Returns True if the job finished successfully.
+        """
+        return self.__execution_completed() == "True"
 
     def cancel(self) -> None:
         """

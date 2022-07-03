@@ -1,9 +1,26 @@
+"""
+Copyright 2022 OVO Energy Ltd
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+   http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
+
 import logging
 from datetime import datetime
 from typing import Sequence
 
 from VertFlow.cloud_run import CloudRunJob
 from VertFlow.data import CarbonIntensityData
+from airflow import AirflowException
 from airflow.models import BaseOperator
 
 
@@ -14,19 +31,19 @@ class VertFlowOperator(BaseOperator):
             project_id: str,
             name: str,
             allowed_regions: Sequence[str],
-            annotations: dict,
             image_address: str,
             command: str,
             arguments: list[str],
-            environment_variables: dict,
-            working_directory: str,
-            port_number: int,
-            max_retries: int,
-            timeout_seconds: int,
-            initialisation_timeout_seconds: int,
             service_account_email_address: str,
-            cpu_limit: int,
-            memory_limit: str,
+            working_directory: str = "/",
+            port_number: int = "8080",
+            max_retries: int = 3,
+            timeout_seconds: int = 300,
+            initialisation_timeout_seconds: int = 60,
+            cpu_limit: int = 1,
+            environment_variables: dict = {},
+            memory_limit: str = "512Mi",
+            annotations: dict = {},
             **kwargs
     ) -> None:
         """
@@ -94,11 +111,14 @@ class VertFlowOperator(BaseOperator):
             self.memory_limit
         )
 
-        logging.info(f"Created a Cloud Run job with this specification:\n{self.job.specification}")
+        logging.info(f"Created a Cloud Run job with specification:\n{self.job.specification}")
 
         logging.info(f"Running job...")
         self.job.run()
-        logging.info(f"Job complete.")
+        execution = self.job.execution
+        logging.info(f"Job run complete:\n{execution}")
+        if not self.job.run_completed_successfully:
+            raise AirflowException(f"Cloud Run job failed. View execution logs at: {self.job.execution_log_uri}")
 
     def on_kill(self) -> None:
         self.job.cancel()
