@@ -1,3 +1,5 @@
+> 🙈 **Nearly ready!** We will be ready to install on PyPi very soon.
+
 <dl>
   <h1>
     <div align=center><img src="logo.png" alt="logo"/></div>
@@ -23,6 +25,10 @@ centre possible.
 > ℹ️ Use in tandem
 > with [Cloud Composer 2](https://cloud.google.com/composer/docs/composer-2/composer-versioning-overview) to save even
 > more money and CO2.
+
+## How to install
+`pip install VertFlow` on your Airflow instance.
+If you're using Cloud Composer, follow [these instructions](https://cloud.google.com/composer/docs/how-to/using/installing-python-dependencies#install-package) to install VertFlow from PyPi.
 
 ## How to use
 
@@ -51,7 +57,7 @@ with DAG(
         name="hello-world",
         allowed_regions=["europe-west1", "europe-west4"],
         command="echo",
-        arguments=["$WORDS"],
+        arguments=["Hello World"],
         service_account_email_address="my-service-account@embroidered-elephant-739.iam.gserviceaccount.com",
         start_date=dt.datetime(2022, 6, 20),
         task_id="test_vertflow_task"
