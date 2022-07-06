@@ -28,11 +28,20 @@ def half_hour_block(at: time) -> int:
 
 
 class CarbonIntensityData:
-
-    def __init__(self):
-        self.data = list(csv.DictReader(codecs.getreader("utf-8")(resource_stream(__name__, "data/data.csv"))))
+    def __init__(self) -> None:
+        self.data = list(
+            csv.DictReader(
+                codecs.getreader("utf-8")(resource_stream(__name__, "data/data.csv"))
+            )
+        )
 
     def greenest_region(self, candidate_regions: Sequence[str], at_time: time) -> str:
-        return min([item for item in self.data if
-                    item["Region"] in candidate_regions and int(item["Block"]) == half_hour_block(at_time)],
-                   key=lambda x: float(x["Intensity_gCO2_kWh"]))["Region"]
+        return min(
+            [
+                item
+                for item in self.data
+                if item["Region"] in candidate_regions
+                and int(item["Block"]) == half_hour_block(at_time)
+            ],
+            key=lambda x: float(x["Intensity_gCO2_kWh"]),
+        )["Region"]

@@ -17,18 +17,18 @@ limitations under the License.
 from setuptools import setup
 
 setup(
-    name='VertFlow',
-    version='0.0.1',
-    description='Apache Airflow operator for running Cloud Run Jobs in the greenest region.',
-    long_description='Apache Airflow operator for running Cloud Run Jobs in the greenest region.',
+    name="VertFlow",
+    version="0.0.1",
+    description="Apache Airflow operator for running Cloud Run Jobs in the greenest region.",
+    long_description="Apache Airflow operator for running Cloud Run Jobs in the greenest region.",
     long_description_content_type="text/x-rst",
-    author='OVO Energy',
-    author_email='trading.dl@ovoenergy.com',
-    packages=['VertFlow'],
-    package_dir={'VertFlow': 'src'},
+    author="OVO Energy",
+    author_email="trading.dl@ovoenergy.com",
+    packages=["VertFlow"],
+    package_dir={"VertFlow": "src"},
     include_package_data=True,
-    package_data={'VertFlow': ['data/*']},
-    python_requires='>=3.7',
+    package_data={"VertFlow": ["data/*"]},
+    python_requires=">=3.7",
     install_requires=["google-api-python-client==2.51.0"],
-    license="Apache 2.0"
+    license="Apache 2.0",
 )
