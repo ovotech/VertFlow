@@ -24,12 +24,12 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
 
-def wait_until( # type: ignore
-        condition: Callable[..., bool],
-        timeout_seconds: int,
-        wait_interval_seconds: int = 5,
-        *args,
-        **kwargs,
+def wait_until(  # type: ignore
+    condition: Callable[..., bool],
+    timeout_seconds: int,
+    wait_interval_seconds: int = 5,
+    *args,
+    **kwargs,
 ) -> None:
     sleep(wait_interval_seconds)
     waited_for_seconds = wait_interval_seconds
@@ -54,15 +54,18 @@ class Specification:
         if self.spec and other.spec:
             logging.debug(f"Comparing specification {self.spec} with {other.spec}...")
             are_equal = (
-                    (
-                            str(self.spec["spec"]["template"]["spec"]["template"]["spec"])
-                            == str(other.spec["spec"]["template"]["spec"]["template"]["spec"])
-                    )
-                    and (str(self.spec["metadata"]["name"]) == str(other.spec["metadata"]["name"]))
-                    and (
-                            str(self.spec["spec"]["template"]["metadata"]["annotations"])
-                            == str(other.spec["spec"]["template"]["metadata"]["annotations"])
-                    )
+                (
+                    str(self.spec["spec"]["template"]["spec"]["template"]["spec"])
+                    == str(other.spec["spec"]["template"]["spec"]["template"]["spec"])
+                )
+                and (
+                    str(self.spec["metadata"]["name"])
+                    == str(other.spec["metadata"]["name"])
+                )
+                and (
+                    str(self.spec["spec"]["template"]["metadata"]["annotations"])
+                    == str(other.spec["spec"]["template"]["metadata"]["annotations"])
+                )
             )
             logging.debug(f"Specifications equal: {are_equal}")
 
@@ -126,20 +129,20 @@ class CloudRunJob:
         wait_until(lambda: self.specification is None, 60)
 
     def create(
-            self,
-            annotations: dict,
-            image_address: str,
-            command: str,
-            args: list[str],
-            environment_variables: dict,
-            working_directory: str,
-            port_number: int,
-            max_retries: int,
-            timeout_seconds: int,
-            initialisation_timeout_seconds: int,
-            service_account_email_address: str,
-            cpu_limit: int,
-            memory_limit: str,
+        self,
+        annotations: dict,
+        image_address: str,
+        command: str,
+        args: list[str],
+        environment_variables: dict,
+        working_directory: str,
+        port_number: int,
+        max_retries: int,
+        timeout_seconds: int,
+        initialisation_timeout_seconds: int,
+        service_account_email_address: str,
+        cpu_limit: int,
+        memory_limit: str,
     ) -> None:
         """
         Create a Cloud Run Job with the given specification in the given project. Job may then be executed with
@@ -242,10 +245,16 @@ class CloudRunJob:
             self.__gcp_client.namespaces().jobs().create(
                 parent=f"namespaces/{self.project_id}", body=new_specification
             ).execute()
-            wait_until(self.is_build_complete, initialisation_timeout_seconds)
 
-    def is_build_complete(self) -> bool:
-        return str(self.specification["status"]["conditions"][0]["status"]) == "True"
+            def is_build_complete() -> bool:
+                return (
+                    str(self.specification["status"]["conditions"][0]["status"])
+                    == "True"
+                    if self.specification
+                    else False
+                )
+
+            wait_until(is_build_complete, initialisation_timeout_seconds)
 
     def run(self) -> None:
         """
@@ -260,7 +269,15 @@ class CloudRunJob:
             f"/executions/{execution['metadata']['name']}"
         )
 
-        wait_until(self.run_completed, self.__run_timeout_seconds * self.__max_retries)
+        logging.info(
+            f"https://console.cloud.google.com/run/jobs/executions/details/{self.region}/{self.__execution_id}"
+            f"/tasks?project={self.project_id}"
+        )
+
+        wait_until(
+            lambda: self.__execution_completed() in ("True", "False"),
+            self.__run_timeout_seconds * self.__max_retries,
+        )
 
     @property
     def execution(self) -> Optional[dict]:
@@ -280,6 +297,9 @@ class CloudRunJob:
 
     @property
     def execution_log_uri(self) -> Optional[str]:
+        """
+        The link to the Cloud Logging page for the Cloud Run Job that has finished executing.
+        """
         return self.execution["status"]["logUri"] if self.execution else None
 
     def __execution_completed(self) -> Optional[str]:
@@ -293,16 +313,10 @@ class CloudRunJob:
             else None
         )
 
-    def run_completed(self) -> bool:
-        """
-        Returns True if the job has finished running (successfully or otherwise).
-        """
-        return self.__execution_completed() in ("True", "False")
-
     @property
     def run_completed_successfully(self) -> bool:
         """
-        Returns True if the job finished successfully.
+        Returns True if the job finished running successfully.
         """
         return self.__execution_completed() == "True"
 

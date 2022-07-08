@@ -16,7 +16,7 @@ limitations under the License.
 
 import logging
 from datetime import datetime
-from typing import Sequence
+from typing import Sequence, Optional
 
 from VertFlow.cloud_run import CloudRunJob
 from VertFlow.data import CarbonIntensityData
@@ -26,25 +26,25 @@ from airflow.utils.context import Context
 
 
 class VertFlowOperator(BaseOperator):
-    def __init__( # type: ignore
-            self,
-            project_id: str,
-            name: str,
-            allowed_regions: Sequence[str],
-            image_address: str,
-            command: str,
-            arguments: list[str],
-            service_account_email_address: str,
-            working_directory: str = "/",
-            port_number: int = 8080,
-            max_retries: int = 3,
-            timeout_seconds: int = 300,
-            initialisation_timeout_seconds: int = 60,
-            cpu_limit: int = 1,
-            environment_variables: dict = {},
-            memory_limit: str = "512Mi",
-            annotations: dict = {},
-            **kwargs,
+    def __init__(  # type: ignore
+        self,
+        project_id: str,
+        name: str,
+        image_address: str,
+        command: str,
+        arguments: list[str],
+        service_account_email_address: str,
+        working_directory: str = "/",
+        port_number: int = 8080,
+        max_retries: int = 3,
+        timeout_seconds: int = 300,
+        initialisation_timeout_seconds: int = 60,
+        cpu_limit: int = 1,
+        environment_variables: dict = {},
+        memory_limit: str = "512Mi",
+        annotations: dict = {},
+        allowed_regions: Optional[Sequence[str]] = None,
+        **kwargs,
     ) -> None:
         """
         Execute a job in a Docker container on Cloud Run. Given a collection of allowed regions that the job can run in,
@@ -53,6 +53,7 @@ class VertFlowOperator(BaseOperator):
         :param project_id: The project in which to run the Cloud Run Job
         :param name: The Job name
         :param allowed_regions: The regions in which the job is allowed to run. The greenest is picked at runtime.
+        Set to None to allow any region.
         :param cpu_limit: Max number of CPUs to assign to the container.
         :param memory_limit: A fixed or floating point number followed by a unit: G or M corresponding to gigabyte or
         megabyte, respectively, or use the power-of-two equivalents: Gi or Mi corresponding to gibibyte or mebibyte
@@ -131,7 +132,6 @@ class VertFlowOperator(BaseOperator):
             f"Created a Cloud Run job with specification:\n{self.job.specification}"
         )
 
-        logging.info("Running job...")
         self.job.run()
         execution = self.job.execution
         logging.info(f"Job run complete:\n{execution}")

@@ -1,8 +1,6 @@
-> 🙈 **Nearly ready!** We will be ready to install on PyPi very soon.
-
 <dl>
   <h1>
-    <div align=center><img src="logo.png" alt="logo"/></div>
+        <div align=center><img src="https://storage.googleapis.com/vertflow/logo.png" alt="logo"/></div>
     <div align=center>VertFlow</div>
   </h1>
   <p align="center"><i>Run Docker containers on Airflow using green energy</i></p>
@@ -17,7 +15,7 @@ Cloud Run is a serverless container runtime, meaning you BYO Docker image and em
 This is *easier, cheaper and greener* than managing a Kubernetes cluster spinning 24/7.
 
 **Not all data centres are created equal.**  
-Data centres run on electricity generated from various sources, including fossil fuels which lead to harmful CO2
+Data centres run on electricity generated from various sources, including fossil fuels which emit harmful carbon
 emissions. Some data centres are greener than others, using electricity from renewable sources such as wind and hydro.  
 When you deploy a container on Airflow using the VertFlow operator, it will run your container in the greenest GCP data
 centre possible.
@@ -27,8 +25,11 @@ centre possible.
 > more money and CO2.
 
 ## How to install
+
 `pip install VertFlow` on your Airflow instance.
-If you're using Cloud Composer, follow [these instructions](https://cloud.google.com/composer/docs/how-to/using/installing-python-dependencies#install-package) to install VertFlow from PyPi.
+> ℹ️ If you're using Cloud Composer,
+> follow [these instructions](https://cloud.google.com/composer/docs/how-to/using/installing-python-dependencies#install-package)
+> to install VertFlow from PyPi.
 
 ## How to use
 
@@ -65,14 +66,16 @@ with DAG(
 ```
 
 ## Limitations
-
 * There is no test coverage on this library as yet. Tests will follow.
 * Cloud Run Jobs is not yet Generally Available. Production use is not advised. It also has a series of limitations,
   e.g. tasks can run for no longer than 1 hour.
-* The container running the Cloud Run Job cannot access resources on a VPC. Dynamic creation of a Serverless VPC
-  Connector would be required, which is not supported.
-* VertFlow assumes no emissions from transmitting data between regions. These may infact be non-trivial if storage and
+* The container running the Cloud Run Job cannot (yet) access resources on a VPC.
+* VertFlow (currently) assumes no emissions from transmitting data between regions. These may infact be non-trivial if
+  storage and
   compute are far from each other. Charges may also be incurred in this scenario.
 * VertFlow uses the [duck curve](https://en.wikipedia.org/wiki/Duck_curve) of the [UK](https://carbonintensity.org.uk/)
   to add daily shape to [Google's CFE% figures per region](https://cloud.google.com/sustainability/region-carbon#data).
-  This is a placeholder pending robust real-time data.
+  This is a placeholder riddled with tenuous assumptions, pending robust real-time data.
+
+## How to contribute
+Found a bug or fancy resolving one of the limitations? We welcome Pull Requests!

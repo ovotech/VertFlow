@@ -1,0 +1,22 @@
+name: Deploy VertFlow
+
+on:
+  push:
+    branches: [ 'main' ]
+
+jobs:
+  action:
+    runs-on: ubuntu-latest
+    steps:
+      - name: SET UP - Checkout Code
+        uses: actions/checkout@v3
+
+      - name: SET UP - Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Deploy
+        run: sh deploy.sh
+        env:
+          VERTFLOW_PYPI_TOKEN: ${{ secrets.VERTFLOW_PYPI_TOKEN }}

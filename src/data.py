@@ -18,7 +18,7 @@ import codecs
 import csv
 from datetime import time
 from math import floor
-from typing import Sequence
+from typing import Sequence, Optional
 
 from pkg_resources import resource_stream
 
@@ -35,12 +35,22 @@ class CarbonIntensityData:
             )
         )
 
-    def greenest_region(self, candidate_regions: Sequence[str], at_time: time) -> str:
+    def greenest_region(
+        self, candidate_regions: Optional[Sequence[str]], at_time: time
+    ) -> str:
+        """
+        Return the Google Cloud region with the lowest carbon intensity at at_time.
+        :param candidate_regions: A sequence of regions from which to select the greenest, or None to select from all
+        regions.
+        :param at_time: The time at which to measure the carbon intensity of the regions.
+        :return:
+        """
+
         return min(
             [
                 item
                 for item in self.data
-                if item["Region"] in candidate_regions
+                if (candidate_regions is None or item["Region"] in candidate_regions)
                 and int(item["Block"]) == half_hour_block(at_time)
             ],
             key=lambda x: float(x["Intensity_gCO2_kWh"]),
