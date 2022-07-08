@@ -29,29 +29,27 @@ def half_hour_block(at: time) -> int:
 
 class CarbonIntensityData:
     def __init__(self) -> None:
-        self.data = list(
-            csv.DictReader(
-                codecs.getreader("utf-8")(resource_stream(__name__, "data/data.csv"))
-            )
-        )
+        data_csv_resource = resource_stream(__name__, "data/data.csv")
+        self.__data = list(csv.DictReader(codecs.getreader("utf-8")(data_csv_resource)))
+        data_csv_resource.close()
 
     def greenest_region(
-        self, candidate_regions: Optional[Sequence[str]], at_time: time
+        self, at: time, candidate_regions: Optional[Sequence[str]] = None
     ) -> str:
         """
         Return the Google Cloud region with the lowest carbon intensity at at_time.
         :param candidate_regions: A sequence of regions from which to select the greenest, or None to select from all
         regions.
-        :param at_time: The time at which to measure the carbon intensity of the regions.
+        :param at: The time at which to measure the carbon intensity of the regions.
         :return:
         """
 
         return min(
             [
                 item
-                for item in self.data
+                for item in self.__data
                 if (candidate_regions is None or item["Region"] in candidate_regions)
-                and int(item["Block"]) == half_hour_block(at_time)
+                and int(item["Block"]) == half_hour_block(at)
             ],
             key=lambda x: float(x["Intensity_gCO2_kWh"]),
         )["Region"]
