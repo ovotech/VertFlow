@@ -1,35 +1,36 @@
-from typing import Optional
+from typing import Optional, Any
 
 
-def intersection_equal(dict_a: Optional[dict], dict_b: Optional[dict]) -> bool:
+def intersection_equal(a: Optional[Any], b: Optional[Any]) -> bool:
     """
-    Determines mutual keys between two dictionaries.
-    Returns True if the values of those mutual keys are equal.
-    Recursively crawls through any nested dictionaries and lists of dictionaries.
-    :param dict_a: A dictionary, potentially containing nested (lists of) dictionaries.
-    :param dict_b: A dictionary, potentially containing nested (lists of) dictionaries.
-    :return: True, if the values of all mututal keys in the dictionary tree are equal.
+    Determines mutual items (dictionary keys or list indices) in two iterables.
+    Returns True if the values of those mutual items are equal.
+    Recursively crawls through any nested iterables.
+    If non-iterables are provided, a simple equality check is run on them both.
+    :param a: A dictionary, list or non-iterable Any-type.
+    :param b: A dictionary, list or non-iterable Any-type.
+    :return: True, if the values of all mutual items are equal.
     """
 
-    # Shortcut
-    if dict_a == dict_b:  # Either both None or both not-None and identical.
+    # Shortcuts
+    if a == b:  # Either both None or both not-None and identical.
         return True
-
-    if not dict_a or not dict_b:  # Exactly one is None.
+    if not a or not b:  # Exactly one is None.
         return False
+    if not (type(a) == type(b) == dict) and not (type(a) == type(b) == list):
+        return bool(a == b)
 
     equal = True
-    for x in dict_a:
-        if x in dict_b:
-            if isinstance(dict_a[x], dict) and isinstance(dict_b[x], dict):
-                equal = equal and intersection_equal(dict_a[x], dict_b[x])
-            elif isinstance(dict_a[x], list) and isinstance(dict_b[x], list):
+
+    for x in a:
+        if x in b:
+            if isinstance(a[x], dict) and isinstance(b[x], dict):
+                equal = equal and intersection_equal(a[x], b[x])
+            elif isinstance(a[x], list) and isinstance(b[x], list):
                 k = 0
-                for v in dict_a[x]:
-                    equal = equal and intersection_equal(
-                        dict_a[x][k], dict_b[x][k]
-                    )  # This will only work if both of them are lists of dicts of equal length. Need to genercise to work with any lists of arbitary length with any inner type.
+                for v in a[x]:
+                    equal = equal and intersection_equal(a[x][k], b[x][k])
                     k += 1
             else:
-                equal = equal and dict_a[x] == dict_b[x]
+                equal = equal and intersection_equal(a[x], b[x])
     return equal

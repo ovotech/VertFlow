@@ -85,7 +85,21 @@ class TestCloudRunJobEndToEnd(TestCase):
         )
 
     def tearDown(self) -> None:
+        self.job.cancel()
+        sleep(10)
         self.job.delete()
+
+    def cancel_job_and_assert_skipped_gracefully(self) -> None:
+        with self.assertLogs() as captured_logs:
+            # Attempt to cancel the job execution.
+            self.job.cancel()
+
+            # Validate that warning that there is nothing to cancel is presented.
+            expected_log_message = "No job execution to cancel."
+            self.assertEqual(len(captured_logs.records), 1)
+            self.assertEqual(
+                captured_logs.records[0].getMessage(), expected_log_message
+            )
 
     def test_end_to_end(self) -> None:
         """
@@ -124,16 +138,7 @@ class TestCloudRunJobEndToEnd(TestCase):
             intersection_equal(spec_from_first_creation, self.job.specification)
         )
 
-        with self.assertLogs() as captured_logs:
-            # Attempt to cancel the job execution.
-            self.job.cancel()
-
-            # Validate that warning that there is nothing to cancel is presented.
-            expected_log_message = "No job execution to cancel."
-            self.assertEqual(len(captured_logs.records), 1)
-            self.assertEqual(
-                captured_logs.records[0].getMessage(), expected_log_message
-            )
+        self.cancel_job_and_assert_skipped_gracefully()
 
         # Validate that details relating to execution are empty.
         self.assertIsNone(self.job.execution)
@@ -172,6 +177,9 @@ class TestCloudRunJobEndToEnd(TestCase):
 
         # Delete the job
         self.job.delete()
+
+        # Try to cancel a deleted job. This should be graceful.
+        self.cancel_job_and_assert_skipped_gracefully()
 
         # Validate that the spec is empty, i.e. the job was deleted.
         self.assertIsNone(self.job.specification)

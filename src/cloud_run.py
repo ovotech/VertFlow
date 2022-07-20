@@ -23,7 +23,7 @@ from google.api_core.client_options import ClientOptions
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
-from src.utils import intersection_equal
+from VertFlow.utils import intersection_equal
 
 
 def wait_until(  # type: ignore
@@ -97,6 +97,7 @@ class CloudRunJob:
                 name=self.job_address
             ).execute()
         wait_until(lambda: self.specification is None, 60)
+        self.__execution_id = None
 
     def create(
         self,
@@ -239,13 +240,15 @@ class CloudRunJob:
         )
 
         logging.info(
-            f"https://console.cloud.google.com/run/jobs/executions/details/{self.region}/{self.__execution_id}"
+            f"Cloud Run Job execution started. View execution logs at: "
+            f"https://console.cloud.google.com/run/jobs/executions/details/{self.region}/{execution['metadata']['name']}"
             f"/tasks?project={self.project_id}"
         )
         if wait:
+            sleep(5)
             wait_until(
                 lambda: self.__execution_completed() in ("True", "False"),
-                self.__run_timeout_seconds * (self.__max_retries + 1),
+                self.__run_timeout_seconds * (self.__max_retries + 1) + 10,
             )
 
     @property
