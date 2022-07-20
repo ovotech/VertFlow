@@ -75,7 +75,7 @@ class Specification:
 
 
 class CloudRunJob:
-    def __init__(self, region: str, project_id: str, name: str):
+    def __init__(self, region: str, project_id: str, name: str) -> None:
         """
         Represents a Cloud Run Job, to be fetched, created, run or cancelled.
         :param project_id: The project in which to run the Cloud Run Job
@@ -83,6 +83,7 @@ class CloudRunJob:
         :param region: The region in which to run the Cloud Run Job
         """
 
+        self.__execution_id: Optional[str] = None
         self.project_id = project_id
         self.name = name
         self.region = region
@@ -256,9 +257,10 @@ class CloudRunJob:
 
             wait_until(is_build_complete, initialisation_timeout_seconds)
 
-    def run(self) -> None:
+    def run(self, wait: bool = True) -> None:
         """
         Run the job and wait for completion.
+        :param: wait: Whether to wait (i.e. block) until the job has completed on Cloud Run.
         :return: None
         """
         execution = (
@@ -273,11 +275,11 @@ class CloudRunJob:
             f"https://console.cloud.google.com/run/jobs/executions/details/{self.region}/{self.__execution_id}"
             f"/tasks?project={self.project_id}"
         )
-
-        wait_until(
-            lambda: self.__execution_completed() in ("True", "False"),
-            self.__run_timeout_seconds * self.__max_retries,
-        )
+        if wait:
+            wait_until(
+                lambda: self.__execution_completed() in ("True", "False"),
+                self.__run_timeout_seconds * (self.__max_retries + 1),
+            )
 
     @property
     def execution(self) -> Optional[dict]:
@@ -314,7 +316,7 @@ class CloudRunJob:
         )
 
     @property
-    def run_completed_successfully(self) -> bool:
+    def executed_successfully(self) -> bool:
         """
         Returns True if the job finished running successfully.
         """
@@ -329,3 +331,6 @@ class CloudRunJob:
             self.__gcp_client.namespaces().executions().delete(
                 name=self.__execution_id
             ).execute()
+            self.__execution_id = None
+        else:
+            logging.warning("No job execution to cancel.")
