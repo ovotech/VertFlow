@@ -15,11 +15,10 @@ limitations under the License.
 """
 
 import logging
-from datetime import datetime
 from typing import Sequence, Optional
 
 from VertFlow.cloud_run import CloudRunJob
-from VertFlow.data import CarbonIntensityData
+from VertFlow.data import CloudRunRegions
 from airflow import AirflowException
 from airflow.models import BaseOperator
 from airflow.utils.context import Context
@@ -34,6 +33,7 @@ class VertFlowOperator(BaseOperator):
         command: str,
         arguments: list[str],
         service_account_email_address: str,
+        co2_signal_api_key: str,
         working_directory: str = "/",
         port_number: int = 8080,
         max_retries: int = 3,
@@ -54,6 +54,7 @@ class VertFlowOperator(BaseOperator):
         :param name: The Job name
         :param allowed_regions: The regions in which the job is allowed to run. The greenest is picked at runtime.
         Set to None to allow any region.
+        :param co2_signal_api_key: The auth token for the CO2 Signal API from which to obtain carbon intensity data. Get a free one at https://www.co2signal.com/.
         :param cpu_limit: Max number of CPUs to assign to the container.
         :param memory_limit: A fixed or floating point number followed by a unit: G or M corresponding to gigabyte or
         megabyte, respectively, or use the power-of-two equivalents: Gi or Mi corresponding to gibibyte or mebibyte
@@ -85,6 +86,7 @@ class VertFlowOperator(BaseOperator):
         the task has.
         """
 
+        self.co2_signal_api_key = co2_signal_api_key
         self.project_id = project_id
         self.name = name
         self.allowed_regions = allowed_regions
@@ -105,10 +107,29 @@ class VertFlowOperator(BaseOperator):
         super().__init__(resources=None, **kwargs)
 
     def execute(self, context: Context) -> None:
+
+        cloud_run_regions = CloudRunRegions(self.project_id, self.co2_signal_api_key)
+
+        try:
+            greenest = cloud_run_regions.greenest(self.allowed_regions)
+            closest = cloud_run_regions.closest
+            logging.info(
+                f"Deploying Cloud Run Job {self.name} in {greenest['name']} ({greenest['id']}) "
+                f"where carbon intensity is {greenest['carbon_intensity']} gCO2eq/kWh. "
+                f"This is {greenest['carbon_intensity'] - greenest['carbon_intensity']} gCO2eq/kWh lower than your closest region {closest['name']} ({closest['id']})."
+            )
+        except (ConnectionError, LookupError) as e:
+            greenest = (
+                self.allowed_regions[0]
+                if self.allowed_regions
+                else cloud_run_regions.closest
+            )
+            logging.warning(
+                f"Deploying Cloud Run Job {self.name} in region {greenest['id']} as it was not possible to determine the greenest region:\n{repr(e)}"
+            )
+
         self.job = CloudRunJob(
-            CarbonIntensityData().greenest_region(
-                self.allowed_regions, datetime.utcnow().time()
-            ),
+            greenest["id"],
             self.project_id,
             self.name,
         )
@@ -135,7 +156,7 @@ class VertFlowOperator(BaseOperator):
         self.job.run()
         execution = self.job.execution
         logging.info(f"Job run complete:\n{execution}")
-        if not self.job.run_completed_successfully:
+        if not self.job.executed_successfully:
             raise AirflowException(
                 f"Cloud Run job failed. View execution logs at: {self.job.execution_log_uri}"
             )

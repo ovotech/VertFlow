@@ -1,7 +1,9 @@
 from time import time, sleep
+from typing import Optional
 from unittest import TestCase
 
-from src.cloud_run import CloudRunJob, Specification
+from src.cloud_run import CloudRunJob, wait_until
+from src.utils import intersection_equal
 
 
 def create_quick_test_job(job: CloudRunJob, command: str, args: list[str]) -> None:
@@ -22,6 +24,59 @@ def create_quick_test_job(job: CloudRunJob, command: str, args: list[str]) -> No
     )
 
 
+class TestWaitUntil(TestCase):
+    def setUp(self) -> None:
+        self.number_of_calls_until_returns_true = 3
+        self.call_count = 0
+        self.wait_interval_seconds = 5
+
+    def condition_to_wait_for(self) -> bool:
+        if self.call_count < self.number_of_calls_until_returns_true:
+            self.call_count += 1
+            return False
+        else:
+            return True
+
+    def test_wait_until_blocks_until_condition_returns_true(self) -> None:
+
+        time_before_wait = time()
+
+        # Condition will return true after 15 seconds.
+        wait_until(self.condition_to_wait_for, 20, self.wait_interval_seconds)
+
+        # Validate that wait_until exits cleanly after c. 15 seconds.
+        self.assertTrue(
+            self.number_of_calls_until_returns_true * self.wait_interval_seconds
+            < time() - time_before_wait
+            <= self.number_of_calls_until_returns_true * self.wait_interval_seconds + 1
+        )
+
+    def test_wait_throws_if_timeout_is_reached_before_condition_returns_true(
+        self,
+    ) -> None:
+
+        time_before_wait = time()
+        timeout_seconds = 5
+        exception_thrown: Optional[Exception] = None
+
+        try:
+            wait_until(
+                self.condition_to_wait_for, timeout_seconds, self.wait_interval_seconds
+            )
+        except Exception as e:
+            exception_thrown = e
+
+        time_after_wait = time()
+
+        # Validate that wait_until exits after timeout
+        self.assertTrue(
+            timeout_seconds < time_after_wait - time_before_wait <= timeout_seconds + 1
+        )
+
+        # Validate that wait_until throws a TimeoutError
+        self.assertIsInstance(exception_thrown, TimeoutError)
+
+
 class TestCloudRunJobEndToEnd(TestCase):
     def setUp(self) -> None:
         # Instantiate a brand new Cloud Run job.
@@ -30,7 +85,21 @@ class TestCloudRunJobEndToEnd(TestCase):
         )
 
     def tearDown(self) -> None:
+        self.job.cancel()
+        sleep(10)
         self.job.delete()
+
+    def cancel_job_and_assert_skipped_gracefully(self) -> None:
+        with self.assertLogs() as captured_logs:
+            # Attempt to cancel the job execution.
+            self.job.cancel()
+
+            # Validate that warning that there is nothing to cancel is presented.
+            expected_log_message = "No job execution to cancel."
+            self.assertEqual(len(captured_logs.records), 1)
+            self.assertEqual(
+                captured_logs.records[0].getMessage(), expected_log_message
+            )
 
     def test_end_to_end(self) -> None:
         """
@@ -45,45 +114,31 @@ class TestCloudRunJobEndToEnd(TestCase):
 
         # Validate that the spec is non-empty, i.e. the job was created successfully.
         spec_from_first_creation = self.job.specification
-        #        self.assertEqual(self.job.specification)  # TODO Assert against what?
+        self.assertIsNotNone(self.job.specification)
 
         with self.assertLogs() as captured_logs:
             # Create a new Job with an identical specification.
             create_quick_test_job(self.job, "echo", ["Hello World"])
 
             # Validate that no change is made.
-            expected_log_message = (
-                "A Cloud Run Job already exists with this name in this project and region. "
-                "It will be overwritten with the new specification provided."
-            )
+            expected_log_message = "A Cloud Run Job already exists with an identical specification. No action taken."
         self.assertEqual(len(captured_logs.records), 1)
         self.assertEqual(captured_logs.records[0].getMessage(), expected_log_message)
 
         # Validate that spec from the second run is identical to the first.
-        self.assertEqual(
-            Specification(spec_from_first_creation),
-            Specification(self.job.specification),
+        self.assertTrue(
+            intersection_equal(spec_from_first_creation, self.job.specification)
         )
 
         # Create a new Job that is different to the first.
         create_quick_test_job(self.job, "echo", ["Hello World 2"])
 
         # Validate that the spec is different, i.e. the change was successfully applied.
-        self.assertNotEqual(
-            Specification(spec_from_first_creation),
-            Specification(self.job.specification),
-        )  # TODO Assert equal against stuff?
+        self.assertFalse(
+            intersection_equal(spec_from_first_creation, self.job.specification)
+        )
 
-        with self.assertLogs() as captured_logs:
-            # Attempt to cancel the job execution.
-            self.job.cancel()
-
-            # Validate that warning that there is nothing to cancel is presented.
-            expected_log_message = "No job execution to cancel."
-            self.assertEqual(len(captured_logs.records), 1)
-            self.assertEqual(
-                captured_logs.records[0].getMessage(), expected_log_message
-            )
+        self.cancel_job_and_assert_skipped_gracefully()
 
         # Validate that details relating to execution are empty.
         self.assertIsNone(self.job.execution)
@@ -122,6 +177,9 @@ class TestCloudRunJobEndToEnd(TestCase):
 
         # Delete the job
         self.job.delete()
+
+        # Try to cancel a deleted job. This should be graceful.
+        self.cancel_job_and_assert_skipped_gracefully()
 
         # Validate that the spec is empty, i.e. the job was deleted.
         self.assertIsNone(self.job.specification)

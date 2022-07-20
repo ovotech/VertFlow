@@ -23,6 +23,8 @@ from google.api_core.client_options import ClientOptions
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
+from VertFlow.utils import intersection_equal
+
 
 def wait_until(  # type: ignore
     condition: Callable[..., bool],
@@ -31,47 +33,14 @@ def wait_until(  # type: ignore
     *args,
     **kwargs,
 ) -> None:
-    sleep(wait_interval_seconds)
-    waited_for_seconds = wait_interval_seconds
+    waited_for_seconds = 0
     while not condition(*args, **kwargs):
-        if waited_for_seconds > timeout_seconds:
+        if waited_for_seconds >= timeout_seconds:
             raise TimeoutError(
                 f"Timeout exceeded waiting for condition: {condition.__code__}"
             )
         sleep(wait_interval_seconds)
         waited_for_seconds += wait_interval_seconds
-
-
-class Specification:
-    def __init__(self, spec: Optional[dict]) -> None:
-        self.spec = spec
-
-    def __eq__(self, other: object) -> bool:
-
-        if not isinstance(other, Specification):
-            return False
-
-        if self.spec and other.spec:
-            logging.debug(f"Comparing specification {self.spec} with {other.spec}...")
-            are_equal = (
-                (
-                    str(self.spec["spec"]["template"]["spec"]["template"]["spec"])
-                    == str(other.spec["spec"]["template"]["spec"]["template"]["spec"])
-                )
-                and (
-                    str(self.spec["metadata"]["name"])
-                    == str(other.spec["metadata"]["name"])
-                )
-                and (
-                    str(self.spec["spec"]["template"]["metadata"]["annotations"])
-                    == str(other.spec["spec"]["template"]["metadata"]["annotations"])
-                )
-            )
-            logging.debug(f"Specifications equal: {are_equal}")
-
-            return are_equal
-        else:
-            return (self.spec is None) == (other.spec is None)
 
 
 class CloudRunJob:
@@ -128,6 +97,7 @@ class CloudRunJob:
                 name=self.job_address
             ).execute()
         wait_until(lambda: self.specification is None, 60)
+        self.__execution_id = None
 
     def create(
         self,
@@ -186,10 +156,7 @@ class CloudRunJob:
 
         # While Cloud Run jobs is in pre-release, explicitly allow use of this Launch Stage.
         # https://cloud.google.com/run/docs/troubleshooting#launch-stage-validation
-        annotations = annotations | {
-            "run.googleapis.com/launch-stage": "BETA",
-            "run.googleapis.com/execution-environment": "gen2",
-        }
+        annotations = annotations | {"run.googleapis.com/launch-stage": "BETA"}
 
         new_specification = {
             "apiVersion": "run.googleapis.com/v1",
@@ -230,7 +197,7 @@ class CloudRunJob:
             },
         }
 
-        if Specification(self.specification) == Specification(new_specification):
+        if intersection_equal(self.specification, new_specification):
             logging.warning(
                 "A Cloud Run Job already exists with an identical specification. No action taken."
             )
@@ -255,6 +222,7 @@ class CloudRunJob:
                     else False
                 )
 
+            sleep(5)  # Give Cloud Run a chance to warm up.
             wait_until(is_build_complete, initialisation_timeout_seconds)
 
     def run(self, wait: bool = True) -> None:
@@ -272,13 +240,15 @@ class CloudRunJob:
         )
 
         logging.info(
-            f"https://console.cloud.google.com/run/jobs/executions/details/{self.region}/{self.__execution_id}"
+            f"Cloud Run Job execution started. View execution logs at: "
+            f"https://console.cloud.google.com/run/jobs/executions/details/{self.region}/{execution['metadata']['name']}"
             f"/tasks?project={self.project_id}"
         )
         if wait:
+            sleep(5)
             wait_until(
                 lambda: self.__execution_completed() in ("True", "False"),
-                self.__run_timeout_seconds * (self.__max_retries + 1),
+                self.__run_timeout_seconds * (self.__max_retries + 1) + 10,
             )
 
     @property

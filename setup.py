@@ -20,7 +20,7 @@ from setuptools import setup
 
 setup(
     name="VertFlow",
-    version="0.0.4",
+    version="0.1.0",
     description="Apache Airflow operator for running Google Cloud Run Jobs using green energy",
     long_description=(Path(__file__).parent / "README.md").read_text(),
     long_description_content_type="text/markdown",
@@ -28,9 +28,11 @@ setup(
     author_email="trading.dl@ovoenergy.com",
     packages=["VertFlow"],
     package_dir={"VertFlow": "src"},
-    include_package_data=True,
-    package_data={"VertFlow": ["data/*"]},
     python_requires=">=3.7",
-    install_requires=["google-api-python-client==2.51.0"],
+    install_requires=[
+        "google-api-python-client==2.51.0",
+        "requests-cache==0.9.5",
+        "geocoder==1.38.1",
+    ],
     license="Apache 2.0",
 )
