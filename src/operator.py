@@ -116,7 +116,7 @@ class VertFlowOperator(BaseOperator):
             logging.info(
                 f"Deploying Cloud Run Job {self.name} in {greenest['name']} ({greenest['id']}) "
                 f"where carbon intensity is {greenest['carbon_intensity']} gCO2eq/kWh. "
-                f"This is {greenest['carbon_intensity'] - greenest['carbon_intensity']} gCO2eq/kWh lower than your closest region {closest['name']} ({closest['id']})."
+                f"This is {closest['carbon_intensity'] - greenest['carbon_intensity']} gCO2eq/kWh lower than your closest region {closest['name']} ({closest['id']})."
             )
         except (ConnectionError, LookupError) as e:
             greenest = (
