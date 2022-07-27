@@ -26,25 +26,25 @@ from airflow.utils.context import Context
 
 class VertFlowOperator(BaseOperator):
     def __init__(  # type: ignore
-        self,
-        project_id: str,
-        name: str,
-        image_address: str,
-        command: str,
-        arguments: list[str],
-        service_account_email_address: str,
-        co2_signal_api_key: str,
-        working_directory: str = "/",
-        port_number: int = 8080,
-        max_retries: int = 3,
-        timeout_seconds: int = 300,
-        initialisation_timeout_seconds: int = 60,
-        cpu_limit: int = 1,
-        environment_variables: dict = {},
-        memory_limit: str = "512Mi",
-        annotations: dict = {},
-        allowed_regions: Optional[Sequence[str]] = None,
-        **kwargs,
+            self,
+            project_id: str,
+            name: str,
+            image_address: str,
+            command: str,
+            arguments: list[str],
+            service_account_email_address: str,
+            co2_signal_api_key: str,
+            working_directory: str = "/",
+            port_number: int = 8080,
+            max_retries: int = 3,
+            timeout_seconds: int = 300,
+            initialisation_timeout_seconds: int = 60,
+            cpu_limit: int = 1,
+            environment_variables: dict = {},
+            memory_limit: str = "512Mi",
+            annotations: dict = {},
+            allowed_regions: Optional[Sequence[str]] = None,
+            **kwargs,
     ) -> None:
         """
         Execute a job in a Docker container on Cloud Run. Given a collection of allowed regions that the job can run in,
@@ -107,7 +107,23 @@ class VertFlowOperator(BaseOperator):
         super().__init__(resources=None, **kwargs)
 
     def execute(self, context: Context) -> None:
-
+        art = """
+                                                                       .-'''-.                  
+                                                              .---.   '   _    \                
+ .----.     .----.   __.....__                                |   | /   /` '.   \               
+  \\    \\   /    /.-''         '.                         _.._ |   |.   |     \\  '       _     _ 
+   '   '. /'   //     .-''"'-.  `. .-,.--.      .|     .' .._||   ||   '      |  '/\\    \\\\   // 
+   |    |'    //     /________\\   \\|  .-. |   .' |_    | '    |   |\\    \\     / / `\\\\  //\\\\ //  
+   |    ||    ||                  || |  | | .'     | __| |__  |   | `.   ` ..' /    \\`//  \\'/   
+   '.   `'   .'\\    .-------------'| |  | |'--.  .-'|__   __| |   |    '-...-'`      \\|   |/    
+    \\        /  \\    '-.____...---.| |  '-    |  |     | |    |   |                   '         
+     \\      /    `.             .' | |        |  |     | |    |   |                             
+      '----'       `''-...... -'   | |        |  '.'   | |    '---'                             
+                                   |_|        |   /    | |                                      
+                                              `'-'     |_|                                      
+        """
+        logging.info(art)
+        logging.info("VertFlow is finding the greenest region to run your Cloud Run Job.")
         cloud_run_regions = CloudRunRegions(self.project_id, self.co2_signal_api_key)
 
         try:
