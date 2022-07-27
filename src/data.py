@@ -23,6 +23,9 @@ import requests_cache
 from geocoder import ip, osm, distance
 from googleapiclient.discovery import build
 
+logging.getLogger("geocoder").setLevel(logging.WARNING)
+logging.getLogger("requests_cache").setLevel(logging.WARNING)
+logging.getLogger("googleapiclient").setLevel(logging.WARNING)
 
 class CloudRunRegions:
     def __init__(self, project_id: str, co2_signal_api_key: str) -> None:
