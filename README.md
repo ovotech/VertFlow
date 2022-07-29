@@ -4,10 +4,10 @@
     <div align=center>VertFlow</div>
   </h1>
   <p align="center"><i>Run Docker containers on Airflow using green energy</i></p>
+  <p align="center"><a href="https://drive.google.com/file/d/15XDWTu4kZfxE-SHAQcyMokr52gE_zGhv/view"><img src="https://storage.googleapis.com/vertflow/video_screenshot.png" width="358" height="201"  alt="Video Demo"/></a></p>
 </dl>
 
 ## 📖 About
-
 **VertFlow is an [Airflow](https://airflow.apache.org/) operator for
 running [Cloud Run Jobs](https://cloud.google.com/run/docs/create-jobs) on Google Cloud Platform in green data
 centres.**  
@@ -76,8 +76,8 @@ with DAG(
   storage and
   compute are far from each other. Charges may also be incurred in this scenario.
 
-## 🔌🗺 Shout out to Electricity Maps
-VertFlow works thanks to real-time global carbon intensity data, gifted to the world by [Electricity Maps](https://app.electricitymaps.com/map).
+## 🔌🗺 Shout out to CO2 Signal
+VertFlow works thanks to real-time global carbon intensity data, gifted to the world for non-commercial use by [CO2 Signal](https://www.co2signal.com/).
 
 ## 🤝 How to contribute
 Found a bug or fancy resolving one of the limitations? We welcome Pull Requests!

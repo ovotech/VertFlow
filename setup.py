@@ -20,7 +20,7 @@ from setuptools import setup
 
 setup(
     name="VertFlow",
-    version="0.1.1",
+    version="0.1.2",
     description="Apache Airflow operator for running Google Cloud Run Jobs using green energy",
     long_description=(Path(__file__).parent / "README.md").read_text(),
     long_description_content_type="text/markdown",

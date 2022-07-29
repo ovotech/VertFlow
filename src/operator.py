@@ -165,13 +165,13 @@ class VertFlowOperator(BaseOperator):
             self.memory_limit,
         )
 
-        logging.info(
+        logging.debug(
             f"Created a Cloud Run job with specification:\n{self.job.specification}"
         )
 
         self.job.run()
         execution = self.job.execution
-        logging.info(f"Job run complete:\n{execution}")
+        logging.debug(f"Job run complete:\n{execution}")
         if not self.job.executed_successfully:
             raise AirflowException(
                 f"Cloud Run job failed. View execution logs at: {self.job.execution_log_uri}"
