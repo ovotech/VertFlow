@@ -198,13 +198,13 @@ class CloudRunJob:
         }
 
         if intersection_equal(self.specification, new_specification):
-            logging.warning(
+            logging.debug(
                 "A Cloud Run Job already exists with an identical specification. No action taken."
             )
 
         else:
             if self.specification:
-                logging.warning(
+                logging.debug(
                     "A Cloud Run Job already exists with this name in this project and region. "
                     "It will be overwritten with the new specification provided."
                 )
