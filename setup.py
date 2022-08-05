@@ -13,14 +13,14 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-
+from os import environ
 from pathlib import Path
 
 from setuptools import setup
 
 setup(
     name="VertFlow",
-    version="0.1.2",
+    version=environ["VERTFLOW_VERSION"],
     description="Apache Airflow operator for running Google Cloud Run Jobs using green energy",
     long_description=(Path(__file__).parent / "README.md").read_text(),
     long_description_content_type="text/markdown",
@@ -30,9 +30,9 @@ setup(
     package_dir={"VertFlow": "src"},
     python_requires=">=3.7",
     install_requires=[
-        "google-api-python-client==2.51.0",
-        "requests-cache==0.9.5",
-        "geocoder==1.38.1",
+        "google-api-python-client<2.0.0,>=1.6.0",
+        "requests-cache==0.6.0",
+        "geocoder>=1.38.1,<2.0.0",
     ],
     license="Apache 2.0",
 )

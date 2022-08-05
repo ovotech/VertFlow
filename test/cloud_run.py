@@ -1,8 +1,7 @@
 from time import time, sleep
-from typing import Optional
 from unittest import TestCase
 
-from src.cloud_run import CloudRunJob, wait_until
+from src.cloud_run import CloudRunJob
 from src.utils import intersection_equal
 
 
@@ -22,59 +21,6 @@ def create_quick_test_job(job: CloudRunJob, command: str, args: list[str]) -> No
         cpu_limit=1,
         memory_limit="512Mi",
     )
-
-
-class TestWaitUntil(TestCase):
-    def setUp(self) -> None:
-        self.number_of_calls_until_returns_true = 3
-        self.call_count = 0
-        self.wait_interval_seconds = 5
-
-    def condition_to_wait_for(self) -> bool:
-        if self.call_count < self.number_of_calls_until_returns_true:
-            self.call_count += 1
-            return False
-        else:
-            return True
-
-    def test_wait_until_blocks_until_condition_returns_true(self) -> None:
-
-        time_before_wait = time()
-
-        # Condition will return true after 15 seconds.
-        wait_until(self.condition_to_wait_for, 20, self.wait_interval_seconds)
-
-        # Validate that wait_until exits cleanly after c. 15 seconds.
-        self.assertTrue(
-            self.number_of_calls_until_returns_true * self.wait_interval_seconds
-            < time() - time_before_wait
-            <= self.number_of_calls_until_returns_true * self.wait_interval_seconds + 1
-        )
-
-    def test_wait_throws_if_timeout_is_reached_before_condition_returns_true(
-        self,
-    ) -> None:
-
-        time_before_wait = time()
-        timeout_seconds = 5
-        exception_thrown: Optional[Exception] = None
-
-        try:
-            wait_until(
-                self.condition_to_wait_for, timeout_seconds, self.wait_interval_seconds
-            )
-        except Exception as e:
-            exception_thrown = e
-
-        time_after_wait = time()
-
-        # Validate that wait_until exits after timeout
-        self.assertTrue(
-            timeout_seconds < time_after_wait - time_before_wait <= timeout_seconds + 1
-        )
-
-        # Validate that wait_until throws a TimeoutError
-        self.assertIsInstance(exception_thrown, TimeoutError)
 
 
 class TestCloudRunJobEndToEnd(TestCase):
@@ -116,14 +62,17 @@ class TestCloudRunJobEndToEnd(TestCase):
         spec_from_first_creation = self.job.specification
         self.assertIsNotNone(self.job.specification)
 
-        with self.assertLogs() as captured_logs:
+        with self.assertLogs(level="DEBUG") as captured_logs:
             # Create a new Job with an identical specification.
             create_quick_test_job(self.job, "echo", ["Hello World"])
 
             # Validate that no change is made.
             expected_log_message = "A Cloud Run Job already exists with an identical specification. No action taken."
-        self.assertEqual(len(captured_logs.records), 1)
-        self.assertEqual(captured_logs.records[0].getMessage(), expected_log_message)
+        logs_emitted_by_module = [
+            log for log in captured_logs.records if log.name == "root"
+        ]
+        self.assertEqual(len(logs_emitted_by_module), 1)
+        self.assertEqual(logs_emitted_by_module[0].getMessage(), expected_log_message)
 
         # Validate that spec from the second run is identical to the first.
         self.assertTrue(

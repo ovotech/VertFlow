@@ -27,6 +27,7 @@ logging.getLogger("geocoder").setLevel(logging.WARNING)
 logging.getLogger("requests_cache").setLevel(logging.WARNING)
 logging.getLogger("googleapiclient").setLevel(logging.WARNING)
 
+
 class CloudRunRegions:
     def __init__(self, project_id: str, co2_signal_api_key: str) -> None:
         """
@@ -77,8 +78,7 @@ class CloudRunRegions:
         """
         geolocation = ip("me").latlng
 
-        here = dict()
-        here["lat"], here["lon"] = geolocation[0], geolocation[1]
+        here = {"lat": geolocation[0], "lon": geolocation[1]}
 
         distances_from_here = [
             region
@@ -99,7 +99,7 @@ class CloudRunRegions:
         }
 
     def greenest(
-            self, candidate_regions: Optional[Sequence[str]] = None
+        self, candidate_regions: Optional[Sequence[str]] = None
     ) -> dict[str, str | float | int]:
         """
         Return the Google Cloud region with the lowest carbon intensity now.
@@ -133,7 +133,7 @@ class CloudRunRegions:
                 )
 
         if (
-                carbon_intensity_for_candidate_regions == []
+            carbon_intensity_for_candidate_regions == []
         ):  # If all regions failed, throw now.
             raise LookupError(f"Could not get carbon intensity data for any region.")
 
@@ -152,13 +152,15 @@ class CloudRunRegions:
         region_obj = [r for r in self.__all if region == r["id"]][0]
 
         try:
-            session = requests_cache.CachedSession("co2_signal_cache", expire_after=timedelta(hours=1))
+            session = requests_cache.CachedSession(
+                "co2_signal_cache", expire_after=timedelta(hours=1)
+            )
             request = session.get(
                 f"https://api.co2signal.com/v1/latest?lon={region_obj['lon']}&lat={region_obj['lat']}",
                 headers={"auth-token": self.co2_signal_api_key},
             )
             assert (
-                    request.status_code == 200
+                request.status_code == 200
             ), f"Got bad response code {request.status_code} from CO2 Signal API."
         except Exception as e:
             raise ConnectionError(

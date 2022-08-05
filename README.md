@@ -8,6 +8,7 @@
 </dl>
 
 ## 📖 About
+
 **VertFlow is an [Airflow](https://airflow.apache.org/) operator for
 running [Cloud Run Jobs](https://cloud.google.com/run/docs/create-jobs) on Google Cloud Platform in green data
 centres.**  
@@ -20,22 +21,21 @@ emissions. Some data centres are greener than others, using electricity from ren
 When you deploy a container on Airflow using the VertFlow operator, it will run your container in the greenest GCP data
 centre possible.
 
-> ℹ️ Use in tandem
-> with [Cloud Composer 2](https://cloud.google.com/composer/docs/composer-2/composer-versioning-overview) to save even
+> ℹ️ Use VertFlow on [Cloud Composer 2](https://cloud.google.com/composer/docs/composer-2/composer-versioning-overview)
+> to save even
 > more money and CO2.
 
 ## 🔧 How to install
 
 1. `pip install VertFlow` on your Airflow instance.
-2. Ensure your Airflow scheduler has outbound access to the public internet.
+2. Ensure your Airflow scheduler has outbound access to the public internet and the `roles/run.developer` Cloud IAM
+   role.
 3. Get a [free API Key for the CO2 Signal API](https://www.co2signal.com/).
-> ℹ️ If you're using Cloud Composer,
-> follow [these instructions](https://cloud.google.com/composer/docs/how-to/using/installing-python-dependencies#install-package)
-> to install VertFlow from PyPi.
 
->️ ℹ️ If you're using Cloud Composer with Private IP,
-> follow [these instructions](https://cloud.google.com/composer/docs/concepts/private-ip#public_internet_access_for_your_workflows)
-> to set up internet access.
+> ℹ️ If you're using Cloud Composer, these instructions may be helpful:
+> * [Installing PyPI packages](https://cloud.google.com/composer/docs/how-to/using/installing-python-dependencies#install-package)
+> * [Setting up internet access](https://cloud.google.com/composer/docs/concepts/private-ip#public_internet_access_for_your_workflows)
+> * [About service accounts for Cloud Composer](https://cloud.google.com/composer/docs/composer-2/access-control#about-service)
 
 ## 🖱 How to use
 
@@ -45,7 +45,7 @@ Provide:
 * The address of the Docker image to run.
 * A runtime specification, e.g. timeout and memory limits.
 * A set of allowed regions to run the job in, based on latency, data governance and other considerations. VertFlow
-   picks the greenest one.
+  picks the greenest one.
 
 ```python
 from VertFlow.operator import VertFlowOperator
@@ -63,21 +63,16 @@ with DAG(
         command="echo",
         arguments=["Hello World"],
         service_account_email_address="my-service-account@embroidered-elephant-739.iam.gserviceaccount.com",
-        co2_signal_api_key = "5bbWXo9PQv3outh45E4fsLHwgsXvf1Z"
+        co2_signal_api_key="5bbWXo9PQv3outh45E4fsLHwgsXvf1Z"
         ...
     )
 ```
 
-## 🤷 Limitations
-* Cloud Run Jobs is not yet Generally Available. Production use is not advised. It also has a series of limitations,
-  e.g. tasks can run for no longer than 1 hour.
-* The container running the Cloud Run Job cannot (yet) access resources on a VPC.
-* VertFlow (currently) assumes no emissions from transmitting data between regions. These may infact be non-trivial if
-  storage and
-  compute are far from each other. Charges may also be incurred in this scenario.
-
 ## 🔌🗺 Shout out to CO2 Signal
-VertFlow works thanks to real-time global carbon intensity data, gifted to the world for non-commercial use by [CO2 Signal](https://www.co2signal.com/).
+
+VertFlow works thanks to real-time global carbon intensity data, gifted to the world for non-commercial use
+by [CO2 Signal](https://www.co2signal.com/).
 
 ## 🤝 How to contribute
-Found a bug or fancy resolving one of the limitations? We welcome Pull Requests!
+
+Found a bug or fancy resolving an issue? We welcome Pull Requests!

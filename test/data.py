@@ -16,4 +16,5 @@ class TestData(TestCase):
     -Warning if single region can't lookup
     -Throws if all regions can't lookup.
     -Loud connection error if no internet, rate limit, bad/no key.
+    -Cache works
     """

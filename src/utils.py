@@ -1,4 +1,22 @@
-from typing import Optional, Any
+from time import sleep
+from typing import Optional, Any, Callable
+
+
+def wait_until(  # type: ignore
+    condition: Callable[..., bool],
+    timeout_seconds: int,
+    wait_interval_seconds: int = 5,
+    *args,
+    **kwargs,
+) -> None:
+    waited_for_seconds = 0
+    while not condition(*args, **kwargs):
+        if waited_for_seconds >= timeout_seconds:
+            raise TimeoutError(
+                f"Timeout exceeded waiting for condition: {condition.__code__}"
+            )
+        sleep(wait_interval_seconds)
+        waited_for_seconds += wait_interval_seconds
 
 
 def intersection_equal(a: Optional[Any], b: Optional[Any]) -> bool:

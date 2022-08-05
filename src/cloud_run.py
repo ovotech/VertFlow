@@ -15,32 +15,13 @@ limitations under the License.
 """
 
 import logging
-from collections.abc import Callable
 from time import sleep
 from typing import Optional, Dict, Any
 
+from VertFlow.utils import intersection_equal, wait_until
 from google.api_core.client_options import ClientOptions
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
-
-from VertFlow.utils import intersection_equal
-
-
-def wait_until(  # type: ignore
-    condition: Callable[..., bool],
-    timeout_seconds: int,
-    wait_interval_seconds: int = 5,
-    *args,
-    **kwargs,
-) -> None:
-    waited_for_seconds = 0
-    while not condition(*args, **kwargs):
-        if waited_for_seconds >= timeout_seconds:
-            raise TimeoutError(
-                f"Timeout exceeded waiting for condition: {condition.__code__}"
-            )
-        sleep(wait_interval_seconds)
-        waited_for_seconds += wait_interval_seconds
 
 
 class CloudRunJob:
@@ -82,7 +63,7 @@ class CloudRunJob:
             )
             return result
         except HttpError as e:
-            if e.status_code == 404:
+            if e.resp.status == 404:
                 return None
             else:
                 raise
