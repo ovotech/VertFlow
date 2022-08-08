@@ -33,6 +33,7 @@ setup(
         "google-api-python-client<2.0.0,>=1.6.0",
         "requests-cache==0.6.0",
         "geocoder>=1.38.1,<2.0.0",
+        "oauth2client<4.0.0",  # Required by googleapiclient
     ],
     license="Apache 2.0",
 )
