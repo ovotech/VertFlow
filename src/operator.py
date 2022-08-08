@@ -20,7 +20,7 @@ from typing import Sequence, Optional, List
 from VertFlow.cloud_run import CloudRunJob
 from VertFlow.data import CloudRunRegions
 from airflow import AirflowException
-from airflow.models import BaseOperator
+from airflow.models import BaseOperator, Variable
 from airflow.utils.context import Context
 
 
@@ -33,7 +33,7 @@ class VertFlowOperator(BaseOperator):
         command: str,
         arguments: List[str],
         service_account_email_address: str,
-        co2_signal_api_key: str,
+        co2_signal_api_key: str = Variable("VERTFLOW_API_KEY"),
         working_directory: str = "/",
         port_number: int = 8080,
         max_retries: int = 3,
@@ -54,7 +54,7 @@ class VertFlowOperator(BaseOperator):
         :param name: The Job name
         :param allowed_regions: The regions in which the job is allowed to run. The greenest is picked at runtime.
         Set to None to allow any region.
-        :param co2_signal_api_key: The auth token for the CO2 Signal API from which to obtain carbon intensity data. Get a free one at https://www.co2signal.com/.
+        :param co2_signal_api_key: The auth token for the CO2 Signal API from which to obtain carbon intensity data.
         :param cpu_limit: Max number of CPUs to assign to the container.
         :param memory_limit: A fixed or floating point number followed by a unit: G or M corresponding to gigabyte or
         megabyte, respectively, or use the power-of-two equivalents: Gi or Mi corresponding to gibibyte or mebibyte
@@ -124,7 +124,7 @@ class VertFlowOperator(BaseOperator):
         """
         logging.info(art)
         logging.info(
-            "VertFlow is finding the greenest region to run your Cloud Run Job."
+            "VertFlow is finding the greenest region for your Cloud Run Job."
         )
         cloud_run_regions = CloudRunRegions(self.project_id, self.co2_signal_api_key)
 
