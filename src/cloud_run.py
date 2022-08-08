@@ -16,7 +16,7 @@ limitations under the License.
 
 import logging
 from time import sleep
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 
 from VertFlow.utils import intersection_equal, wait_until
 from google.api_core.client_options import ClientOptions
@@ -44,6 +44,7 @@ class CloudRunJob:
             client_options=ClientOptions(
                 api_endpoint=f"https://{self.region}-run.googleapis.com"
             ),
+            cache_discovery=False,
         )
 
         self.job_address = f"namespaces/{self.project_id}/jobs/{self.name}"
@@ -85,7 +86,7 @@ class CloudRunJob:
         annotations: dict,
         image_address: str,
         command: str,
-        args: list[str],
+        args: List[str],
         environment_variables: dict,
         working_directory: str,
         port_number: int,
@@ -137,7 +138,7 @@ class CloudRunJob:
 
         # While Cloud Run jobs is in pre-release, explicitly allow use of this Launch Stage.
         # https://cloud.google.com/run/docs/troubleshooting#launch-stage-validation
-        annotations = annotations | {"run.googleapis.com/launch-stage": "BETA"}
+        annotations = {**annotations, **{"run.googleapis.com/launch-stage": "BETA"}}
 
         new_specification = {
             "apiVersion": "run.googleapis.com/v1",

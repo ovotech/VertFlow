@@ -15,7 +15,7 @@ limitations under the License.
 """
 
 import logging
-from typing import Sequence, Optional
+from typing import Sequence, Optional, List
 
 from VertFlow.cloud_run import CloudRunJob
 from VertFlow.data import CloudRunRegions
@@ -31,7 +31,7 @@ class VertFlowOperator(BaseOperator):
         name: str,
         image_address: str,
         command: str,
-        arguments: list[str],
+        arguments: List[str],
         service_account_email_address: str,
         co2_signal_api_key: str,
         working_directory: str = "/",
@@ -136,8 +136,11 @@ class VertFlowOperator(BaseOperator):
                 f"where carbon intensity is {greenest['carbon_intensity']} gCO2eq/kWh. "
                 f"This is {float(closest['carbon_intensity']) - float(greenest['carbon_intensity'])} gCO2eq/kWh lower than your closest region {closest['name']} ({closest['id']})."
             )
+
+            greenest_region_id = str(greenest["id"])
+
         except (ConnectionError, LookupError) as e:
-            greenest = (
+            greenest_region_id = str(
                 self.allowed_regions[0]
                 if self.allowed_regions
                 else cloud_run_regions.closest
@@ -147,7 +150,7 @@ class VertFlowOperator(BaseOperator):
             )
 
         self.job = CloudRunJob(
-            str(greenest["id"]),
+            greenest_region_id,
             self.project_id,
             self.name,
         )

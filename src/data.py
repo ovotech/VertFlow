@@ -17,7 +17,7 @@ import logging
 from datetime import timedelta
 from json import loads
 from time import sleep
-from typing import Sequence, Optional
+from typing import Sequence, Optional, List, Dict, Union
 
 import requests_cache
 from geocoder import ip, osm, distance
@@ -40,7 +40,7 @@ class CloudRunRegions:
 
         self.__all = self.__get_all_regions()
 
-    def __get_all_regions(self) -> list[dict[str, str | float]]:
+    def __get_all_regions(self) -> List[Dict[str, Union[str, float]]]:
         client = build("run", "v1")
         raw = (
             client.projects()
@@ -49,7 +49,7 @@ class CloudRunRegions:
             .execute()["locations"]
         )
 
-        all_regions: list[dict[str, str | float]] = []
+        all_regions: List[Dict[str, Union[str, float]]] = []
         for region in raw:
             try:
                 geojson = osm(region["displayName"]).geojson["features"][0][
@@ -71,7 +71,7 @@ class CloudRunRegions:
         return all_regions
 
     @property
-    def closest(self) -> dict[str, str | float | int]:
+    def closest(self) -> Dict[str, Union[str, float, int]]:
         """
         Return the Google Cloud region closest to this machine.
         :return: A dictionary of data about the closest region.
@@ -81,11 +81,15 @@ class CloudRunRegions:
         here = {"lat": geolocation[0], "lon": geolocation[1]}
 
         distances_from_here = [
-            region
-            | {
-                "distance_from_current_location": int(
-                    distance((here["lat"], here["lon"]), (region["lat"], region["lon"]))
-                )
+            {
+                **region,
+                **{
+                    "distance_from_current_location": int(
+                        distance(
+                            (here["lat"], here["lon"]), (region["lat"], region["lon"])
+                        )
+                    )
+                },
             }
             for region in self.__all
         ]
@@ -94,13 +98,14 @@ class CloudRunRegions:
             distances_from_here, key=lambda x: x["distance_from_current_location"]
         )
 
-        return closest | {
-            "carbon_intensity": self.__carbon_intensity(str(closest["id"]))
+        return {
+            **closest,
+            **{"carbon_intensity": self.__carbon_intensity(str(closest["id"]))},
         }
 
     def greenest(
         self, candidate_regions: Optional[Sequence[str]] = None
-    ) -> dict[str, str | float | int]:
+    ) -> Dict[str, Union[str, float, int]]:
         """
         Return the Google Cloud region with the lowest carbon intensity now.
         :param candidate_regions: A sequence of region IDs from which to select the greenest, or None to select from all
@@ -119,13 +124,21 @@ class CloudRunRegions:
         else:
             regions = self.__all
 
-        carbon_intensity_for_candidate_regions: list[dict[str, str | float | int]] = []
+        carbon_intensity_for_candidate_regions: List[
+            Dict[str, Union[str, float, int]]
+        ] = []
 
         for region in regions:
             try:
                 carbon_intensity_for_candidate_regions.append(
-                    region
-                    | {"carbon_intensity": self.__carbon_intensity(str(region["id"]))}
+                    {
+                        **region,
+                        **{
+                            "carbon_intensity": self.__carbon_intensity(
+                                str(region["id"])
+                            )
+                        },
+                    }
                 )
             except LookupError:  # Skip over errors for individual regions.
                 logging.warning(

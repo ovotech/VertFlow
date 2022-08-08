@@ -1,11 +1,12 @@
 from time import time, sleep
+from typing import List
 from unittest import TestCase
 
 from src.cloud_run import CloudRunJob
 from src.utils import intersection_equal
 
 
-def create_quick_test_job(job: CloudRunJob, command: str, args: list[str]) -> None:
+def create_quick_test_job(job: CloudRunJob, command: str, args: List[str]) -> None:
     job.create(
         annotations={},
         image_address="us-docker.pkg.dev/cloudrun/container/job:latest",
