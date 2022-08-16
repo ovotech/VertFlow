@@ -30,7 +30,7 @@ centre possible.
 1. `pip install VertFlow` on your Airflow instance.
 2. Ensure your Airflow scheduler has outbound access to the public internet and the `roles/run.developer` Cloud IAM
    role.
-3. Get a [free API Key for the CO2 Signal API](https://www.co2signal.com/).
+3. Get an [API Key for CO2 Signal](https://www.co2signal.com/), free for non-commercial use. Store in an Airflow variable called `VERTFLOW_API_KEY`.
 
 > ℹ️ If you're using Cloud Composer, these instructions may be helpful:
 > * [Installing PyPI packages](https://cloud.google.com/composer/docs/how-to/using/installing-python-dependencies#install-package)
@@ -57,13 +57,11 @@ with DAG(
 ) as dag:
     task = VertFlowOperator(
         image_address="us-docker.pkg.dev/cloudrun/container/job:latest",
-        project_id="embroidered-elephant-739",
         name="hello-world",
         allowed_regions=["europe-west1", "europe-west4"],
         command="echo",
         arguments=["Hello World"],
         service_account_email_address="my-service-account@embroidered-elephant-739.iam.gserviceaccount.com",
-        co2_signal_api_key="5bbWXo9PQv3outh45E4fsLHwgsXvf1Z"
         ...
     )
 ```

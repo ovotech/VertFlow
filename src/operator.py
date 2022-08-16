@@ -20,29 +20,32 @@ from typing import Sequence, Optional, List
 from VertFlow.cloud_run import CloudRunJob
 from VertFlow.data import CloudRunRegions
 from airflow import AirflowException
-from airflow.models import BaseOperator
+from airflow.models import BaseOperator, Variable
 from airflow.utils.context import Context
+from google.auth import default
+
+ENVIRONMENT_GCP_PROJECT: Optional[str] = default()[1]
 
 
 class VertFlowOperator(BaseOperator):
     def __init__(  # type: ignore
         self,
-        project_id: str,
         name: str,
         image_address: str,
         command: str,
         arguments: List[str],
         service_account_email_address: str,
-        co2_signal_api_key: str,
+        project_id: Optional[str] = None,
+        co2_signal_api_key: Optional[str] = None,
         working_directory: str = "/",
         port_number: int = 8080,
         max_retries: int = 3,
         timeout_seconds: int = 300,
         initialisation_timeout_seconds: int = 60,
         cpu_limit: int = 1,
-        environment_variables: dict = {},
+        environment_variables: Optional[dict] = None,
         memory_limit: str = "512Mi",
-        annotations: dict = {},
+        annotations: Optional[dict] = None,
         allowed_regions: Optional[Sequence[str]] = None,
         **kwargs,
     ) -> None:
@@ -54,7 +57,7 @@ class VertFlowOperator(BaseOperator):
         :param name: The Job name
         :param allowed_regions: The regions in which the job is allowed to run. The greenest is picked at runtime.
         Set to None to allow any region.
-        :param co2_signal_api_key: The auth token for the CO2 Signal API from which to obtain carbon intensity data. Get a free one at https://www.co2signal.com/.
+        :param co2_signal_api_key: The auth token for the CO2 Signal API from which to obtain carbon intensity data.
         :param cpu_limit: Max number of CPUs to assign to the container.
         :param memory_limit: A fixed or floating point number followed by a unit: G or M corresponding to gigabyte or
         megabyte, respectively, or use the power-of-two equivalents: Gi or Mi corresponding to gibibyte or mebibyte
@@ -87,14 +90,26 @@ class VertFlowOperator(BaseOperator):
         """
 
         self.co2_signal_api_key = co2_signal_api_key
-        self.project_id = project_id
+
+        self.project_id = project_id or ENVIRONMENT_GCP_PROJECT
+        assert (
+            self.project_id is not None
+        ), "You must provide a project ID, as one could not be determined from the environment."
+
+        self.co2_signal_api_key = co2_signal_api_key or Variable.get(
+            "VERTFLOW_API_KEY", None
+        )
+        assert (
+            self.co2_signal_api_key is not None
+        ), "You must provide the co2_signal_api_key variable or set the VERTFLOW_API_KEY Airflow Variable."
+
         self.name = name
         self.allowed_regions = allowed_regions
-        self.annotations = annotations
+        self.annotations = annotations or {}
         self.image_address = image_address
         self.command = command
         self.arguments = arguments
-        self.environment_variables = environment_variables
+        self.environment_variables = environment_variables or {}
         self.working_directory = working_directory
         self.port_number = port_number
         self.max_retries = max_retries
@@ -123,9 +138,7 @@ class VertFlowOperator(BaseOperator):
                                               `'-'     |_|                                      
         """
         logging.info(art)
-        logging.info(
-            "VertFlow is finding the greenest region to run your Cloud Run Job."
-        )
+        logging.info("VertFlow is finding the greenest region for your Cloud Run Job.")
         cloud_run_regions = CloudRunRegions(self.project_id, self.co2_signal_api_key)
 
         try:
@@ -146,7 +159,7 @@ class VertFlowOperator(BaseOperator):
                 else cloud_run_regions.closest
             )
             logging.warning(
-                f"Deploying Cloud Run Job {self.name} in region {greenest['id']} as it was not possible to determine the greenest region:\n{repr(e)}"
+                f"Deploying Cloud Run Job {self.name} in region {greenest_region_id} as it was not possible to determine the greenest region:\n{repr(e)}"
             )
 
         self.job = CloudRunJob(
