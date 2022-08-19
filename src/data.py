@@ -28,7 +28,35 @@ logging.getLogger("requests_cache").setLevel(logging.WARNING)
 logging.getLogger("googleapiclient").setLevel(logging.WARNING)
 
 
+class Geolocation:
+    @classmethod
+    def here(cls) -> Dict[str, float]:
+        geolocation = ip("me").latlng
+        return {"lat": geolocation[0], "lon": geolocation[1]}
+
+    @classmethod
+    def of(cls, location_name) -> Dict[str, float]:
+        try:
+            geojson = osm(location_name).geojson["features"][0]["properties"]
+            return {"lat": geojson["lat"], "lon": geojson["lng"]}
+        except IndexError:
+            raise LookupError(f"Could not geolocate {location_name}.")
+
+
+class CloudRunRegionsClient:
+    @classmethod
+    def list(cls, project_id) -> List[Dict[str, str]]:
+        client = build("run", "v1")
+        return (
+            client.projects()
+            .locations()
+            .list(name=f"projects/{project_id}")
+            .execute()["locations"]
+        )
+
+
 class CloudRunRegions:
+
     def __init__(self, project_id: str, co2_signal_api_key: str) -> None:
         """
         Location and carbon intensity data for regions supported by Google Cloud Run.
@@ -38,32 +66,25 @@ class CloudRunRegions:
         self.project_id = project_id
         self.co2_signal_api_key = co2_signal_api_key
 
-        self.__all = self.__get_all_regions()
+        self.all = self.__get_all_regions()
 
     def __get_all_regions(self) -> List[Dict[str, Union[str, float]]]:
-        client = build("run", "v1")
-        raw = (
-            client.projects()
-            .locations()
-            .list(name=f"projects/{self.project_id}")
-            .execute()["locations"]
-        )
+
+        raw = CloudRunRegionsClient.list(self.project_id)
 
         all_regions: List[Dict[str, Union[str, float]]] = []
         for region in raw:
             try:
-                geojson = osm(region["displayName"]).geojson["features"][0][
-                    "properties"
-                ]
+                geolocation = Geolocation.of(region["displayName"])
                 all_regions.append(
                     {
                         "id": str(region["locationId"]),
                         "name": str(region["displayName"]),
-                        "lat": float(geojson["lat"]),
-                        "lon": float(geojson["lng"]),
+                        "lat": float(geolocation["lat"]),
+                        "lon": float(geolocation["lon"]),
                     }
                 )
-            except IndexError:  # Isolated to a single location. Other types should throw loudly.
+            except LookupError:  # Isolated to a single location. Other types should throw loudly.
                 logging.warning(
                     f"Could not get geolocation data for region {region['locationId']}"
                 )
@@ -76,9 +97,7 @@ class CloudRunRegions:
         Return the Google Cloud region closest to this machine.
         :return: A dictionary of data about the closest region.
         """
-        geolocation = ip("me").latlng
-
-        here = {"lat": geolocation[0], "lon": geolocation[1]}
+        here = Geolocation.here()
 
         distances_from_here = [
             {
@@ -91,7 +110,7 @@ class CloudRunRegions:
                     )
                 },
             }
-            for region in self.__all
+            for region in self.all
         ]
 
         closest = min(
@@ -100,11 +119,11 @@ class CloudRunRegions:
 
         return {
             **closest,
-            **{"carbon_intensity": self.__carbon_intensity(str(closest["id"]))},
+            **{"carbon_intensity": self._carbon_intensity(str(closest["id"]))},
         }
 
     def greenest(
-        self, candidate_regions: Optional[Sequence[str]] = None
+            self, candidate_regions: Optional[Sequence[str]] = None
     ) -> Dict[str, Union[str, float, int]]:
         """
         Return the Google Cloud region with the lowest carbon intensity now.
@@ -115,14 +134,14 @@ class CloudRunRegions:
 
         if candidate_regions:
             assert set(candidate_regions).issubset(
-                {region["id"] for region in self.__all}
-            ), f"Invalid region(s) provided. Allowed Cloud Run regions: {self.__all}"
+                {region["id"] for region in self.all}
+            ), f"Invalid region(s) provided. Allowed Cloud Run regions: {self.all}"
             regions = [
-                region for region in self.__all if region["id"] in candidate_regions
+                region for region in self.all if region["id"] in candidate_regions
             ]
 
         else:
-            regions = self.__all
+            regions = self.all
 
         carbon_intensity_for_candidate_regions: List[
             Dict[str, Union[str, float, int]]
@@ -134,9 +153,7 @@ class CloudRunRegions:
                     {
                         **region,
                         **{
-                            "carbon_intensity": self.__carbon_intensity(
-                                str(region["id"])
-                            )
+                            "carbon_intensity": self._carbon_intensity(str(region["id"]))
                         },
                     }
                 )
@@ -146,7 +163,7 @@ class CloudRunRegions:
                 )
 
         if (
-            carbon_intensity_for_candidate_regions == []
+                carbon_intensity_for_candidate_regions == []
         ):  # If all regions failed, throw now.
             raise LookupError(f"Could not get carbon intensity data for any region.")
 
@@ -154,7 +171,7 @@ class CloudRunRegions:
             carbon_intensity_for_candidate_regions, key=lambda x: x["carbon_intensity"]
         )
 
-    def __carbon_intensity(self, region: str) -> int:
+    def _carbon_intensity(self, region: str) -> int:
         """
         Return the carbon intensity of a Google Cloud Region with a given ID, using data from CO2 Signal API.
         Uses locally-cached API data where possible, to prevent hitting rate limits.
@@ -162,7 +179,7 @@ class CloudRunRegions:
         :return: The carbon intensity (in gCO2eq/kWh)
         """
         sleep(1)  # To avoid API rate limits.
-        region_obj = [r for r in self.__all if region == r["id"]][0]
+        region_obj = [r for r in self.all if region == r["id"]][0]
 
         try:
             session = requests_cache.CachedSession(
@@ -173,7 +190,7 @@ class CloudRunRegions:
                 headers={"auth-token": self.co2_signal_api_key},
             )
             assert (
-                request.status_code == 200
+                    request.status_code == 200
             ), f"Got bad response code {request.status_code} from CO2 Signal API."
         except Exception as e:
             raise ConnectionError(

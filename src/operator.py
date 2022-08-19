@@ -53,11 +53,11 @@ class VertFlowOperator(BaseOperator):
         Execute a job in a Docker container on Cloud Run. Given a collection of allowed regions that the job can run in,
         deploys the job to run in the region with the lowest carbon intensity at execution time.
 
-        :param project_id: The project in which to run the Cloud Run Job
+        :param project_id: The project in which to run the Cloud Run Job. Defaults to project set by local user or service account.
         :param name: The Job name
         :param allowed_regions: The regions in which the job is allowed to run. The greenest is picked at runtime.
         Set to None to allow any region.
-        :param co2_signal_api_key: The auth token for the CO2 Signal API from which to obtain carbon intensity data.
+        :param co2_signal_api_key: The auth token for the CO2 Signal API from which to obtain carbon intensity data. If not provided, will be read from Airflow Variable `VERTFLOW_API_KEY`.
         :param cpu_limit: Max number of CPUs to assign to the container.
         :param memory_limit: A fixed or floating point number followed by a unit: G or M corresponding to gigabyte or
         megabyte, respectively, or use the power-of-two equivalents: Gi or Mi corresponding to gibibyte or mebibyte
@@ -67,7 +67,7 @@ class VertFlowOperator(BaseOperator):
         https://kubernetes.io/docs/user-guide/annotations.
         A dictionary of annotation key-value pairs, e.g. { "name": "wrench", "mass": "1.3kg", "count": "3" }
         :param image_address: URL of the Container image.
-        :param command:
+        :param command: The command to run inside the container.
         :param arguments: Arguments to the entrypoint. The docker image's CMD is used if this is not provided. Variable
         references $(VAR_NAME) are expanded using the container's environment. If a variable cannot be resolved, the
         reference in the input string will be unchanged.
@@ -89,8 +89,6 @@ class VertFlowOperator(BaseOperator):
         the task has.
         """
 
-        self.co2_signal_api_key = co2_signal_api_key
-
         self.project_id = project_id or ENVIRONMENT_GCP_PROJECT
         assert (
             self.project_id is not None
@@ -101,7 +99,7 @@ class VertFlowOperator(BaseOperator):
         )
         assert (
             self.co2_signal_api_key is not None
-        ), "You must provide the co2_signal_api_key variable or set the VERTFLOW_API_KEY Airflow Variable."
+        ), "You must provide the co2_signal_api_key argument or set the VERTFLOW_API_KEY Airflow Variable."
 
         self.name = name
         self.allowed_regions = allowed_regions
