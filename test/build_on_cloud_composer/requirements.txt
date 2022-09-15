@@ -1,1 +1,1 @@
-apache-airflow==2.2.5+composer
+apache-airflow==2.3.4rc1
