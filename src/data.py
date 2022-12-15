@@ -19,9 +19,10 @@ from json import loads
 from time import sleep
 from typing import Sequence, Optional, List, Dict, Union
 
+from VertFlow.constants import ALL_CLOUD_RUN_REGIONS
+
 import requests_cache
-from geocoder import ip, osm, distance
-from googleapiclient.discovery import build
+from geocoder import ip, distance
 
 logging.getLogger("geocoder").setLevel(logging.WARNING)
 logging.getLogger("requests_cache").setLevel(logging.WARNING)
@@ -38,37 +39,7 @@ class CloudRunRegions:
         self.project_id = project_id
         self.co2_signal_api_key = co2_signal_api_key
 
-        self.__all = self.__get_all_regions()
-
-    def __get_all_regions(self) -> List[Dict[str, Union[str, float]]]:
-        client = build("run", "v1")
-        raw = (
-            client.projects()
-            .locations()
-            .list(name=f"projects/{self.project_id}")
-            .execute()["locations"]
-        )
-
-        all_regions: List[Dict[str, Union[str, float]]] = []
-        for region in raw:
-            try:
-                geojson = osm(region["displayName"]).geojson["features"][0][
-                    "properties"
-                ]
-                all_regions.append(
-                    {
-                        "id": str(region["locationId"]),
-                        "name": str(region["displayName"]),
-                        "lat": float(geojson["lat"]),
-                        "lon": float(geojson["lng"]),
-                    }
-                )
-            except IndexError:  # Isolated to a single location. Other types should throw loudly.
-                logging.warning(
-                    f"Could not get geolocation data for region {region['locationId']}"
-                )
-
-        return all_regions
+        self.__all = ALL_CLOUD_RUN_REGIONS
 
     @property
     def closest(self) -> Dict[str, Union[str, float, int]]:
