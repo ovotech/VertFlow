@@ -1,5 +1,7 @@
 # A cache of all Cloud Run regions and their location. Cached, rather than fetched dynamically at runtime, to improve performance.
-ALL_CLOUD_RUN_REGIONS = [
+from typing import List, Dict, Union
+
+ALL_CLOUD_RUN_REGIONS: List[Dict[str, Union[str, float]]] = [
     {"id": "asia-east1", "name": "Taiwan", "lat": 23.9739374, "lon": 120.9820179},
     {"id": "asia-east2", "name": "Hong Kong", "lat": 22.2793278, "lon": 114.1628131},
     {"id": "asia-northeast1", "name": "Tokyo", "lat": 35.6828387, "lon": 139.7594549},

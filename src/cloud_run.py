@@ -78,7 +78,7 @@ class CloudRunJob:
             self.__gcp_client.namespaces().jobs().delete(
                 name=self.job_address
             ).execute()
-        wait_until(lambda: self.specification is None, 60)
+        wait_until(lambda: self.specification is None, 120)
         self.__execution_id = None
 
     def create(
