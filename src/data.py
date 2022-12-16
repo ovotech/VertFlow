@@ -19,9 +19,10 @@ from json import loads
 from time import sleep
 from typing import Sequence, Optional, List, Dict, Union
 
+from src.constants import ALL_CLOUD_RUN_REGIONS
+
 import requests_cache
-from geocoder import ip, osm, distance
-from googleapiclient.discovery import build
+from geocoder import ip, distance, osm
 
 logging.getLogger("geocoder").setLevel(logging.WARNING)
 logging.getLogger("requests_cache").setLevel(logging.WARNING)
@@ -43,18 +44,6 @@ class Geolocation:
             raise LookupError(f"Could not geolocate {location_name}.")
 
 
-class CloudRunRegionsClient:
-    @classmethod
-    def list(cls, project_id) -> List[Dict[str, str]]:
-        client = build("run", "v1")
-        return (
-            client.projects()
-            .locations()
-            .list(name=f"projects/{project_id}")
-            .execute()["locations"]
-        )
-
-
 class CloudRunRegions:
 
     def __init__(self, project_id: str, co2_signal_api_key: str) -> None:
@@ -65,31 +54,7 @@ class CloudRunRegions:
         """
         self.project_id = project_id
         self.co2_signal_api_key = co2_signal_api_key
-
-        self.all = self.__get_all_regions()
-
-    def __get_all_regions(self) -> List[Dict[str, Union[str, float]]]:
-
-        raw = CloudRunRegionsClient.list(self.project_id)
-
-        all_regions: List[Dict[str, Union[str, float]]] = []
-        for region in raw:
-            try:
-                geolocation = Geolocation.of(region["displayName"])
-                all_regions.append(
-                    {
-                        "id": str(region["locationId"]),
-                        "name": str(region["displayName"]),
-                        "lat": float(geolocation["lat"]),
-                        "lon": float(geolocation["lon"]),
-                    }
-                )
-            except LookupError:  # Isolated to a single location. Other types should throw loudly.
-                logging.warning(
-                    f"Could not get geolocation data for region {region['locationId']}"
-                )
-
-        return all_regions
+        self.all = ALL_CLOUD_RUN_REGIONS
 
     @property
     def closest(self) -> Dict[str, Union[str, float, int]]:
