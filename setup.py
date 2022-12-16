@@ -36,6 +36,15 @@ setup(
         "oauth2client<4.0.0",  # Required by googleapiclient
     ],
     license="Apache 2.0",
-    keywords=["airflow", "gcp", "google", "cloud run", "cloud composer", "green", "environment", "sustainability"],
-    url="https://github.com/ovotech/VertFlow"
+    keywords=[
+        "airflow",
+        "gcp",
+        "google",
+        "cloud run",
+        "cloud composer",
+        "green",
+        "environment",
+        "sustainability",
+    ],
+    url="https://github.com/ovotech/VertFlow",
 )
