@@ -17,7 +17,7 @@ import logging
 from datetime import timedelta
 from json import loads
 from time import sleep
-from typing import Sequence, Optional, List, Dict, Union
+from typing import Sequence, Optional, List, Dict, Union, Any
 
 from src.constants import ALL_CLOUD_RUN_REGIONS
 
@@ -36,7 +36,7 @@ class Geolocation:
         return {"lat": geolocation[0], "lon": geolocation[1]}
 
     @classmethod
-    def of(cls, location_name) -> Dict[str, float]:
+    def of(cls, location_name: str) -> Dict[str, float]:
         try:
             geojson = osm(location_name).geojson["features"][0]["properties"]
             return {"lat": geojson["lat"], "lon": geojson["lng"]}
@@ -45,7 +45,6 @@ class Geolocation:
 
 
 class CloudRunRegions:
-
     def __init__(self, project_id: str, co2_signal_api_key: str) -> None:
         """
         Location and carbon intensity data for regions supported by Google Cloud Run.
@@ -88,7 +87,7 @@ class CloudRunRegions:
         }
 
     def greenest(
-            self, candidate_regions: Optional[Sequence[str]] = None
+        self, candidate_regions: Optional[Sequence[str]] = None
     ) -> Dict[str, Union[str, float, int]]:
         """
         Return the Google Cloud region with the lowest carbon intensity now.
@@ -118,7 +117,9 @@ class CloudRunRegions:
                     {
                         **region,
                         **{
-                            "carbon_intensity": self._carbon_intensity(str(region["id"]))
+                            "carbon_intensity": self._carbon_intensity(
+                                str(region["id"])
+                            )
                         },
                     }
                 )
@@ -128,7 +129,7 @@ class CloudRunRegions:
                 )
 
         if (
-                carbon_intensity_for_candidate_regions == []
+            carbon_intensity_for_candidate_regions == []
         ):  # If all regions failed, throw now.
             raise LookupError(f"Could not get carbon intensity data for any region.")
 
@@ -155,7 +156,7 @@ class CloudRunRegions:
                 headers={"auth-token": self.co2_signal_api_key},
             )
             assert (
-                    request.status_code == 200
+                request.status_code == 200
             ), f"Got bad response code {request.status_code} from CO2 Signal API."
         except Exception as e:
             raise ConnectionError(

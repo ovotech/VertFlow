@@ -24,7 +24,7 @@ from airflow.models import BaseOperator, Variable
 from airflow.utils.context import Context
 from google.auth import default
 
-ENVIRONMENT_GCP_PROJECT: Optional[str] = default()[1]
+ENVIRONMENT_GCP_PROJECT: str = default()[1]
 
 
 class VertFlowOperator(BaseOperator):
@@ -89,7 +89,7 @@ class VertFlowOperator(BaseOperator):
         the task has.
         """
 
-        self.project_id = project_id or ENVIRONMENT_GCP_PROJECT
+        self.project_id: str = project_id or ENVIRONMENT_GCP_PROJECT
         assert (
             self.project_id is not None
         ), "You must provide a project ID, as one could not be determined from the environment."
