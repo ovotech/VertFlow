@@ -170,7 +170,7 @@ class TestCloudRunRegions(TestCase):
         """Pretending we are based in Bristol, London is returned as the closest region, with accompanying CO2 data."""
 
         regions = CloudRunRegions(self.project_id, self.api_key)
-        regions._carbon_intensity = MagicMock( # type: ignore #https://github.com/python/mypy/issues/2427
+        regions._carbon_intensity = MagicMock(  # type: ignore #https://github.com/python/mypy/issues/2427
             side_effect=mock_carbon_intensity
         )
 
@@ -274,7 +274,7 @@ class TestCloudRunRegions(TestCase):
         """Given no list of candidate regions, greenest returns the greenest of all possible regions."""
 
         regions = CloudRunRegions(self.project_id, self.api_key)
-        regions._carbon_intensity = MagicMock(   # type: ignore #https://github.com/python/mypy/issues/2427
+        regions._carbon_intensity = MagicMock(  # type: ignore #https://github.com/python/mypy/issues/2427
             side_effect=mock_carbon_intensity
         )
 
@@ -322,7 +322,7 @@ class TestCloudRunRegions(TestCase):
         """Given a list of good candidate regions, greenest returns the greenest of the candidates."""
 
         regions = CloudRunRegions(self.project_id, self.api_key)
-        regions._carbon_intensity = MagicMock(   # type: ignore #https://github.com/python/mypy/issues/2427
+        regions._carbon_intensity = MagicMock(  # type: ignore #https://github.com/python/mypy/issues/2427
             side_effect=mock_carbon_intensity
         )
 
