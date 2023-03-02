@@ -17,8 +17,8 @@ limitations under the License.
 import logging
 from typing import Sequence, Optional, List
 
-from VertFlow.cloud_run import CloudRunJob
-from VertFlow.data import CloudRunRegions
+from src.cloud_run import CloudRunJob
+from src.data import CloudRunRegions
 from airflow import AirflowException
 from airflow.models import BaseOperator, Variable
 from airflow.utils.context import Context

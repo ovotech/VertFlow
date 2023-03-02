@@ -19,7 +19,7 @@ from json import loads
 from time import sleep
 from typing import Sequence, Optional, List, Dict, Union, Any
 
-from VertFlow.constants import ALL_CLOUD_RUN_REGIONS
+from src.constants import ALL_CLOUD_RUN_REGIONS
 
 import requests_cache
 from geocoder import ip, distance, osm

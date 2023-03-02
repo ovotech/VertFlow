@@ -39,7 +39,7 @@ class TestCloudRunJobEndToEnd(TestCase):
         sleep(10)
         self.job.delete()
 
-    def test_cancel_job_and_assert_skipped_gracefully(self) -> None:
+    def cancel_job_and_assert_skipped_gracefully(self) -> None:
         with self.assertLogs() as captured_logs:
             # Attempt to cancel the job execution.
             self.job.cancel()
@@ -55,11 +55,14 @@ class TestCloudRunJobEndToEnd(TestCase):
         create_quick_test_job(self.job, "cat", ["/my_secret/secret.txt"],
                               secrets=[Secret("test_secret", "VOLUME", "/my_secret/secret.txt")])
         self.job.run()
+        assert self.job.executed_successfully, "Job ran but failed."
 
     def test_job_consumes_secret_to_env_var(self) -> None:
-        create_quick_test_job(self.job, "env", None,
+        create_quick_test_job(self.job, "bash", ["-c",  "if [ \"$MY_SECRET\" != \"This secret is used for integration "
+                                                        "testing.\" ]; then exit 1; fi"],
                               secrets=[Secret("test_secret", "ENV_VAR", "MY_SECRET")])
         self.job.run()
+        assert self.job.executed_successfully, "Job ran but failed."
 
     def test_end_to_end(self) -> None:
         """

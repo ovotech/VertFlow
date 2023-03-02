@@ -16,12 +16,11 @@ limitations under the License.
 
 import logging
 import pathlib
-import random
 import uuid
 from time import sleep
 from typing import Optional, Dict, Any, List
 
-from VertFlow.utils import intersection_equal, wait_until
+from src.utils import intersection_equal, wait_until
 from google.api_core.client_options import ClientOptions
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
