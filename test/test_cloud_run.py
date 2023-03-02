@@ -3,7 +3,7 @@ from typing import List, Optional
 from unittest import TestCase
 
 from src.cloud_run import CloudRunJob
-from src.cloud_run import Secret
+from src.cloud_run import Secret, SecretType
 from src.utils import intersection_equal
 
 
@@ -53,14 +53,14 @@ class TestCloudRunJobEndToEnd(TestCase):
 
     def test_job_consumes_secret_to_volume(self) -> None:
         create_quick_test_job(self.job, "cat", ["/my_secret/secret.txt"],
-                              secrets=[Secret("test_secret", "VOLUME", "/my_secret/secret.txt")])
+                              secrets=[Secret("test_secret", SecretType.VOLUME, "/my_secret/secret.txt")])
         self.job.run()
         assert self.job.executed_successfully, "Job ran but failed."
 
     def test_job_consumes_secret_to_env_var(self) -> None:
         create_quick_test_job(self.job, "bash", ["-c",  "if [ \"$MY_SECRET\" != \"This secret is used for integration "
                                                         "testing.\" ]; then exit 1; fi"],
-                              secrets=[Secret("test_secret", "ENV_VAR", "MY_SECRET")])
+                              secrets=[Secret("test_secret", SecretType.ENV_VAR, "MY_SECRET")])
         self.job.run()
         assert self.job.executed_successfully, "Job ran but failed."
 

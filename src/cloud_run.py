@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+from enum import Enum
 import logging
 import pathlib
 import uuid
@@ -27,6 +28,10 @@ from googleapiclient.errors import HttpError
 from dataclasses import dataclass
 
 
+class SecretType(Enum):
+    ENV_VAR = 1
+    VOLUME = 2
+
 @dataclass
 class Secret:
     """
@@ -37,7 +42,7 @@ class Secret:
         :param reference_at: The name of the environment variable, or mount path of the volume.
     """
     secret_manager_id: str
-    reference_as: str
+    reference_as: SecretType
     reference_at: str
     secret_manager_version: str = "latest"
 
@@ -162,7 +167,7 @@ class CloudRunJob:
 
         volumes, volume_mounts, env_var_secrets = [], [], []
         for secret in (secrets or []):
-            if secret.reference_as == "VOLUME": #TODO test with and without sub-folders.
+            if secret.reference_as == SecretType.VOLUME: #TODO test with and without sub-folders.
                 path = pathlib.Path(secret.reference_at)
                 assert path.is_absolute(), f"Secret reference_at {secret.reference_at} is not absolute."
                 volume_name = str(uuid.uuid4())
@@ -171,14 +176,14 @@ class CloudRunJob:
                 volume_mount = {"name": volume_name, "readOnly": True, "mountPath": str(path.parent)}
                 volumes.append(volume)
                 volume_mounts.append(volume_mount)
-            elif secret.reference_as == "ENV_VAR":
+            elif secret.reference_as == SecretType.ENV_VAR:
                 env_var_secret = {"name": secret.reference_at, "valueFrom": {
                     "secretKeyRef": {"key": secret.secret_manager_version, "optional": False,
                                      "name": secret.secret_manager_id}}}
                 env_var_secrets.append(env_var_secret)
             else:
                 raise ValueError(
-                    f"Secrets may be referenced as VOLUME or ENV_VAR, but {secret.secret_manager_id} was {secret.reference_as}.")
+                    f"Secrets may be referenced as VOLUME or ENV_VAR, but {secret.secret_manager_id} was {secret.reference_as.name}.")
 
         environment_variables = [
                                     {"name": k, "value": v}
