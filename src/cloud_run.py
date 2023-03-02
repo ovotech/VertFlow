@@ -15,6 +15,9 @@ limitations under the License.
 """
 
 import logging
+import pathlib
+import random
+import uuid
 from time import sleep
 from typing import Optional, Dict, Any, List
 
@@ -22,6 +25,22 @@ from VertFlow.utils import intersection_equal, wait_until
 from google.api_core.client_options import ClientOptions
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
+from dataclasses import dataclass
+
+
+@dataclass
+class Secret:
+    """
+        Reference a secret in Google Secret Manager and make it available within the Cloud Run container.
+        :param secret_manager_id: The fully-qualified ID/address of the Secret to be obtained from Secret Manager.
+        :param secret_manager_version: The version of the secret to be pulled. Defaults to 'latest'.
+        :param reference_as: Whether to reference the secret as an ENV_VAR or VOLUME.
+        :param reference_at: The name of the environment variable, or mount path of the volume.
+    """
+    secret_manager_id: str
+    reference_as: str
+    reference_at: str
+    secret_manager_version: str = "latest"
 
 
 class CloudRunJob:
@@ -82,20 +101,21 @@ class CloudRunJob:
         self.__execution_id = None
 
     def create(
-        self,
-        annotations: dict,
-        image_address: str,
-        command: Optional[str],
-        args: Optional[List[str]],
-        environment_variables: dict,
-        working_directory: str,
-        port_number: int,
-        max_retries: int,
-        timeout_seconds: int,
-        initialisation_timeout_seconds: int,
-        service_account_email_address: str,
-        cpu_limit: int,
-        memory_limit: str,
+            self,
+            annotations: dict,
+            image_address: str,
+            command: Optional[str],
+            args: Optional[List[str]],
+            environment_variables: dict,
+            working_directory: str,
+            port_number: int,
+            max_retries: int,
+            timeout_seconds: int,
+            initialisation_timeout_seconds: int,
+            service_account_email_address: str,
+            cpu_limit: int,
+            memory_limit: str,
+            secrets: Optional[List[Secret]]
     ) -> None:
         """
         Create a Cloud Run Job with the given specification in the given project. Job may then be executed with
@@ -130,6 +150,7 @@ class CloudRunJob:
         :param service_account_email_address: Email address of the IAM service account associated with the task of a
         job execution. The service account represents the identity of the running task, and determines what permissions
         the task has.
+        :param secrets: The secrets from Secret Manager to expose inside the container.
         :return:
         """
 
@@ -139,6 +160,31 @@ class CloudRunJob:
         # While Cloud Run jobs is in pre-release, explicitly allow use of this Launch Stage.
         # https://cloud.google.com/run/docs/troubleshooting#launch-stage-validation
         annotations = {**annotations, **{"run.googleapis.com/launch-stage": "BETA"}}
+
+        volumes, volume_mounts, env_var_secrets = [], [], []
+        for secret in (secrets or []):
+            if secret.reference_as == "VOLUME": #TODO test with and without sub-folders.
+                path = pathlib.Path(secret.reference_at)
+                assert path.is_absolute(), f"Secret reference_at {secret.reference_at} is not absolute."
+                volume_name = str(uuid.uuid4())
+                volume = {"name": volume_name, "secret": {"secretName": secret.secret_manager_id, "items": [
+                    {"key": secret.secret_manager_version, "path": str(path.relative_to(path.parent))}]}}
+                volume_mount = {"name": volume_name, "readOnly": True, "mountPath": str(path.parent)}
+                volumes.append(volume)
+                volume_mounts.append(volume_mount)
+            elif secret.reference_as == "ENV_VAR":
+                env_var_secret = {"name": secret.reference_at, "valueFrom": {
+                    "secretKeyRef": {"key": secret.secret_manager_version, "optional": False,
+                                     "name": secret.secret_manager_id}}}
+                env_var_secrets.append(env_var_secret)
+            else:
+                raise ValueError(
+                    f"Secrets may be referenced as VOLUME or ENV_VAR, but {secret.secret_manager_id} was {secret.reference_as}.")
+
+        environment_variables = [
+                                    {"name": k, "value": v}
+                                    for k, v in environment_variables.items()
+                                ] + env_var_secrets
 
         new_specification = {
             "apiVersion": "run.googleapis.com/v1",
@@ -155,10 +201,8 @@ class CloudRunJob:
                                         "image": image_address,
                                         "command": [command],
                                         "args": args,
-                                        "env": [
-                                            {"name": k, "value": v}
-                                            for k, v in environment_variables.items()
-                                        ],
+                                        "env": environment_variables,
+                                        "volumeMounts": volume_mounts,
                                         "resources": {
                                             "limits": {
                                                 "cpu": str(cpu_limit),
@@ -169,6 +213,7 @@ class CloudRunJob:
                                         "ports": [{"containerPort": port_number}],
                                     }
                                 ],
+                                "volumes": volumes,
                                 "maxRetries": max_retries,
                                 "timeoutSeconds": str(timeout_seconds),
                                 "serviceAccountName": service_account_email_address,

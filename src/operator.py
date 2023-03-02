@@ -28,26 +28,27 @@ ENVIRONMENT_GCP_PROJECT: str = default()[1]
 
 
 class VertFlowOperator(BaseOperator):
+    #TODO Bring the secrets up to the operator
     def __init__(  # type: ignore
-        self,
-        name: str,
-        image_address: str,
-        service_account_email_address: str,
-        command: Optional[str] = None,
-        arguments: Optional[List[str]] = None,
-        project_id: Optional[str] = None,
-        co2_signal_api_key: Optional[str] = None,
-        working_directory: str = "/",
-        port_number: int = 8080,
-        max_retries: int = 3,
-        timeout_seconds: int = 300,
-        initialisation_timeout_seconds: int = 60,
-        cpu_limit: int = 1,
-        environment_variables: Optional[dict] = None,
-        memory_limit: str = "512Mi",
-        annotations: Optional[dict] = None,
-        allowed_regions: Optional[Sequence[str]] = None,
-        **kwargs,
+            self,
+            name: str,
+            image_address: str,
+            service_account_email_address: str,
+            command: Optional[str] = None,
+            arguments: Optional[List[str]] = None,
+            project_id: Optional[str] = None,
+            co2_signal_api_key: Optional[str] = None,
+            working_directory: str = "/",
+            port_number: int = 8080,
+            max_retries: int = 3,
+            timeout_seconds: int = 300,
+            initialisation_timeout_seconds: int = 60,
+            cpu_limit: int = 1,
+            environment_variables: Optional[dict] = None,
+            memory_limit: str = "512Mi",
+            annotations: Optional[dict] = None,
+            allowed_regions: Optional[Sequence[str]] = None,
+            **kwargs,
     ) -> None:
         """
         Execute a job in a Docker container on Cloud Run. Given a collection of allowed regions that the job can run in,
@@ -91,14 +92,14 @@ class VertFlowOperator(BaseOperator):
 
         self.project_id: str = project_id or ENVIRONMENT_GCP_PROJECT
         assert (
-            self.project_id is not None
+                self.project_id is not None
         ), "You must provide a project ID, as one could not be determined from the environment."
 
         self.co2_signal_api_key = co2_signal_api_key or Variable.get(
             "VERTFLOW_API_KEY", None
         )
         assert (
-            self.co2_signal_api_key is not None
+                self.co2_signal_api_key is not None
         ), "You must provide the co2_signal_api_key argument or set the VERTFLOW_API_KEY Airflow Variable."
 
         self.name = name
