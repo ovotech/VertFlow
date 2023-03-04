@@ -34,13 +34,7 @@ setup(
         "requests-cache==0.6.0",
         "geocoder>=1.38.1,<2.0.0",
         "oauth2client<4.0.0",  # Required by googleapiclient
-        "apache-airflow==2.2.5",
     ],
-    extras_require={
-        "dev": [
-            "requests-mock==1.9.3"
-        ]
-    },
     license="Apache 2.0",
     keywords=[
         "airflow",

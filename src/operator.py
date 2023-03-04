@@ -29,26 +29,26 @@ ENVIRONMENT_GCP_PROJECT: str = default()[1]
 
 class VertFlowOperator(BaseOperator):
     def __init__(  # type: ignore
-            self,
-            name: str,
-            image_address: str,
-            service_account_email_address: str,
-            command: Optional[str] = None,
-            arguments: Optional[List[str]] = None,
-            project_id: Optional[str] = None,
-            co2_signal_api_key: Optional[str] = None,
-            working_directory: str = "/",
-            port_number: int = 8080,
-            max_retries: int = 3,
-            timeout_seconds: int = 300,
-            initialisation_timeout_seconds: int = 60,
-            cpu_limit: int = 1,
-            environment_variables: Optional[dict] = None,
-            memory_limit: str = "512Mi",
-            annotations: Optional[dict] = None,
-            allowed_regions: Optional[Sequence[str]] = None,
-            secrets: Optional[Sequence[Secret]] = None,
-            **kwargs,
+        self,
+        name: str,
+        image_address: str,
+        service_account_email_address: str,
+        command: Optional[str] = None,
+        arguments: Optional[List[str]] = None,
+        project_id: Optional[str] = None,
+        co2_signal_api_key: Optional[str] = None,
+        working_directory: str = "/",
+        port_number: int = 8080,
+        max_retries: int = 3,
+        timeout_seconds: int = 300,
+        initialisation_timeout_seconds: int = 60,
+        cpu_limit: int = 1,
+        environment_variables: Optional[dict] = None,
+        memory_limit: str = "512Mi",
+        annotations: Optional[dict] = None,
+        allowed_regions: Optional[Sequence[str]] = None,
+        secrets: Optional[Sequence[Secret]] = None,
+        **kwargs,
     ) -> None:
         """
         Execute a job in a Docker container on Cloud Run. Given a collection of allowed regions that the job can run in,
@@ -88,20 +88,19 @@ class VertFlowOperator(BaseOperator):
         :param service_account_email_address: Email address of the IAM service account associated with the task of a
         job execution. The service account represents the identity of the running task, and determines what permissions
         the task has.
-        :param secrets: Secrets to be passed to the container from Google Secrets Manager in the form of either
-        Environment Variables or mounted as a Volume.
+        :param secrets: Secrets to be passed to the container from Google Secrets Manager.
         """
 
         self.project_id: str = project_id or ENVIRONMENT_GCP_PROJECT
         assert (
-                self.project_id is not None
+            self.project_id is not None
         ), "You must provide a project ID, as one could not be determined from the environment."
 
         self.co2_signal_api_key = co2_signal_api_key or Variable.get(
             "VERTFLOW_API_KEY", None
         )
         assert (
-                self.co2_signal_api_key is not None
+            self.co2_signal_api_key is not None
         ), "You must provide the co2_signal_api_key argument or set the VERTFLOW_API_KEY Airflow Variable."
 
         self.name = name

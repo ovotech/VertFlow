@@ -78,7 +78,7 @@ class CloudRunRegions:
         ]
 
         closest = min(
-            distances_from_here, key=lambda x: x["distance_from_current_location"]  # type: ignore
+            distances_from_here, key=lambda x: x["distance_from_current_location"]
         )
 
         return {
