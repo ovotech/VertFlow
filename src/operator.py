@@ -17,8 +17,8 @@ limitations under the License.
 import logging
 from typing import Sequence, Optional, List
 
-from src.cloud_run import CloudRunJob, Secret
-from src.data import CloudRunRegions
+from .cloud_run import CloudRunJob, Secret
+from .data import CloudRunRegions
 from airflow import AirflowException
 from airflow.models import BaseOperator, Variable
 from airflow.utils.context import Context

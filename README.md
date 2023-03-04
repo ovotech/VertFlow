@@ -44,7 +44,7 @@ Provide:
 
 * The address of the Docker image to run.
 * A runtime specification, e.g. timeout and memory limits.
-* A set of allowed regions to run the job in, based on latency, data governance and other considerations. VertFlow
+* A set of allowed regions to run the job in, based on your latency, data governance and other considerations. VertFlow
   picks the greenest one.
 
 ```python

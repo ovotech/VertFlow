@@ -21,7 +21,7 @@ import uuid
 from time import sleep
 from typing import Optional, Dict, Any, List, Sequence
 
-from src.utils import intersection_equal, wait_until
+from .utils import intersection_equal, wait_until
 from google.api_core.client_options import ClientOptions
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
