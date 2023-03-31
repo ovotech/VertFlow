@@ -17,8 +17,8 @@ limitations under the License.
 import logging
 from typing import Sequence, Optional, List
 
-from VertFlow.cloud_run import CloudRunJob
-from VertFlow.data import CloudRunRegions
+from .cloud_run import CloudRunJob, Secret
+from .data import CloudRunRegions
 from airflow import AirflowException
 from airflow.models import BaseOperator, Variable
 from airflow.utils.context import Context
@@ -47,6 +47,7 @@ class VertFlowOperator(BaseOperator):
         memory_limit: str = "512Mi",
         annotations: Optional[dict] = None,
         allowed_regions: Optional[Sequence[str]] = None,
+        secrets: Optional[Sequence[Secret]] = None,
         **kwargs,
     ) -> None:
         """
@@ -87,6 +88,7 @@ class VertFlowOperator(BaseOperator):
         :param service_account_email_address: Email address of the IAM service account associated with the task of a
         job execution. The service account represents the identity of the running task, and determines what permissions
         the task has.
+        :param secrets: Secrets to be passed to the container from Google Secrets Manager.
         """
 
         self.project_id: str = project_id or ENVIRONMENT_GCP_PROJECT
@@ -116,6 +118,7 @@ class VertFlowOperator(BaseOperator):
         self.service_account_email_address = service_account_email_address
         self.cpu_limit = cpu_limit
         self.memory_limit = memory_limit
+        self.secrets = secrets
 
         super().__init__(resources=None, **kwargs)
 
@@ -179,6 +182,7 @@ class VertFlowOperator(BaseOperator):
             self.service_account_email_address,
             self.cpu_limit,
             self.memory_limit,
+            self.secrets,
         )
 
         logging.debug(
