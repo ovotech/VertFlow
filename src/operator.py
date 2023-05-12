@@ -145,10 +145,19 @@ class VertFlowOperator(BaseOperator):
         try:
             greenest = cloud_run_regions.greenest(self.allowed_regions)
             closest = cloud_run_regions.closest
+
+            saving = float(closest['carbon_intensity']) - float(greenest['carbon_intensity'])
+            if saving > 0:
+                outcome = f"{saving} gCO2eq/kWh less than"
+            elif saving < 0:
+                outcome = f"{saving} gCO2eq/kWh more than"
+            else:
+                outcome = "the same as"
+
             logging.info(
                 f"Deploying Cloud Run Job {self.name} in {greenest['name']} ({greenest['id']}) "
                 f"where carbon intensity is {greenest['carbon_intensity']} gCO2eq/kWh. "
-                f"This is {float(closest['carbon_intensity']) - float(greenest['carbon_intensity'])} gCO2eq/kWh lower than your closest region {closest['name']} ({closest['id']})."
+                f"This is {outcome} your closest region {closest['name']} ({closest['id']})."
             )
 
             greenest_region_id = str(greenest["id"])
