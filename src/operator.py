@@ -17,7 +17,7 @@ limitations under the License.
 import logging
 from typing import Sequence, Optional, List
 
-from .cloud_run import CloudRunJob, Secret
+from .cloud_run import CloudRunJob, Secret, SecretType
 from .data import CloudRunRegions
 from airflow import AirflowException
 from airflow.models import BaseOperator, Variable
