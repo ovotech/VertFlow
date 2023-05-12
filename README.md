@@ -39,7 +39,7 @@ centre possible.
 
 ## 🖱 How to use
 
-Use the `VertFlowOperator` to instantiate a task in your DAG.
+Use the [`VertFlowOperator`](https://github.com/ovotech/VertFlow/blob/main/src/operator.py#L30) to instantiate a task in your DAG.
 Provide:
 
 * The address of the Docker image to run.
