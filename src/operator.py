@@ -37,7 +37,7 @@ class VertFlowOperator(BaseOperator):
         arguments: Optional[List[str]] = None,
         project_id: Optional[str] = None,
         co2_signal_api_key: Optional[str] = None,
-        working_directory: str = "/",
+        working_directory: str = None,
         port_number: int = 8080,
         max_retries: int = 3,
         timeout_seconds: int = 300,
