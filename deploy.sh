@@ -21,7 +21,7 @@ if [[ $TEST == "--test" ]]; then
     --non-interactive \
     --repository testpypi \
     -u __token__ \
-    -p $VERTFLOW_TESTPYPI_TOKEN \
+    -p "$VERTFLOW_TESTPYPI_TOKEN" \
     dist/*
 
   sleep 10
@@ -35,6 +35,6 @@ else
   twine upload \
     --non-interactive \
     -u __token__ \
-    -p $VERTFLOW_PYPI_TOKEN \
+    -p "$VERTFLOW_PYPI_TOKEN" \
     dist/*
 fi

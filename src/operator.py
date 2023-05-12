@@ -17,7 +17,7 @@ limitations under the License.
 import logging
 from typing import Sequence, Optional, List
 
-from .cloud_run import CloudRunJob, Secret
+from .cloud_run import CloudRunJob, Secret, SecretType
 from .data import CloudRunRegions
 from airflow import AirflowException
 from airflow.models import BaseOperator, Variable
@@ -37,7 +37,7 @@ class VertFlowOperator(BaseOperator):
         arguments: Optional[List[str]] = None,
         project_id: Optional[str] = None,
         co2_signal_api_key: Optional[str] = None,
-        working_directory: str = "/",
+        working_directory: str = None,
         port_number: int = 8080,
         max_retries: int = 3,
         timeout_seconds: int = 300,
@@ -145,10 +145,19 @@ class VertFlowOperator(BaseOperator):
         try:
             greenest = cloud_run_regions.greenest(self.allowed_regions)
             closest = cloud_run_regions.closest
+
+            saving = float(closest['carbon_intensity']) - float(greenest['carbon_intensity'])
+            if saving > 0:
+                outcome = f"{saving} gCO2eq/kWh less than"
+            elif saving < 0:
+                outcome = f"{saving} gCO2eq/kWh more than"
+            else:
+                outcome = "the same as"
+
             logging.info(
                 f"Deploying Cloud Run Job {self.name} in {greenest['name']} ({greenest['id']}) "
                 f"where carbon intensity is {greenest['carbon_intensity']} gCO2eq/kWh. "
-                f"This is {float(closest['carbon_intensity']) - float(greenest['carbon_intensity'])} gCO2eq/kWh lower than your closest region {closest['name']} ({closest['id']})."
+                f"This is {outcome} your closest region {closest['name']} ({closest['id']})."
             )
 
             greenest_region_id = str(greenest["id"])
