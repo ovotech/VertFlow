@@ -43,6 +43,8 @@ ALL_CLOUD_RUN_REGIONS: List[Dict[str, Union[str, float]]] = [
         "lat": 48.8588897,
         "lon": 2.3200410217200766,
     },
+    {"id": "europe-west12", "name": "Turin", "lat": 45.0703, "lon": 7.6869},
+    {"id": "me-central1", "name": "Doha", "lat": 25.2854, "lon": 51.5310},
     {"id": "me-west1", "name": "Tel Aviv", "lat": 32.0852997, "lon": 34.7818064},
     {
         "id": "northamerica-northeast1",
