@@ -113,7 +113,7 @@ class CloudRunJob:
         command: Optional[str],
         args: Optional[List[str]],
         environment_variables: dict,
-        working_directory: str,
+        working_directory: Optional[str],
         port_number: int,
         max_retries: int,
         timeout_seconds: int,
@@ -308,7 +308,7 @@ class CloudRunJob:
             )
 
     @property
-    def execution(self) -> Optional[dict]:
+    def execution(self) -> Optional[Dict[str, Any]]:
         """
         Get details of the most recent execution of the job.
         :return: A dictionary of execution metadata, or None if the job has not been executed since the local

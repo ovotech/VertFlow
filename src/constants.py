@@ -1,6 +1,13 @@
 # A cache of all Cloud Run regions and their location. Cached, rather than fetched dynamically at runtime, to improve performance.
 from typing import List, Dict, Union
 
+# https://www.cloudcarbonfootprint.org/docs/methodology
+PUE = 1.1
+MIN_WATTS: float = 0.71
+MAX_WATTS: float = 4.26
+AVG_VCPU_UTILISATION: float = 0.5
+AVERAGE_WATTS: float = MIN_WATTS + AVG_VCPU_UTILISATION * (MAX_WATTS - MIN_WATTS) * PUE
+
 ALL_CLOUD_RUN_REGIONS: List[Dict[str, Union[str, float]]] = [
     {"id": "asia-east1", "name": "Taiwan", "lat": 23.9739374, "lon": 120.9820179},
     {"id": "asia-east2", "name": "Hong Kong", "lat": 22.2793278, "lon": 114.1628131},
