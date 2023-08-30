@@ -37,7 +37,7 @@ class SecretType(Enum):
 class Secret:
     """
     Reference a secret in Google Secret Manager and make it available within the Cloud Run container.
-    :param secret_manager_id: The fully-qualified ID/address of the Secret to be obtained from Secret Manager.
+    :param secret_manager_id: The name of the secret in Secret Manager
     :param secret_manager_version: The version of the secret to be pulled. Defaults to 'latest'.
     :param reference_as: Whether to reference the secret as an ENV_VAR or VOLUME.
     :param reference_at: The name of the environment variable, or mount path of the file.
