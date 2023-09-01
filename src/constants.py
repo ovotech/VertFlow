@@ -6,7 +6,7 @@ PUE = 1.1
 MIN_WATTS: float = 0.71
 MAX_WATTS: float = 4.26
 AVG_VCPU_UTILISATION: float = 0.5
-AVERAGE_WATTS: float = MIN_WATTS + AVG_VCPU_UTILISATION * (MAX_WATTS - MIN_WATTS) * PUE
+AVERAGE_WATTS: float = (MIN_WATTS + AVG_VCPU_UTILISATION * (MAX_WATTS - MIN_WATTS)) * PUE
 
 ALL_CLOUD_RUN_REGIONS: List[Dict[str, Union[str, float]]] = [
     {"id": "asia-east1", "name": "Taiwan", "lat": 23.9739374, "lon": 120.9820179},
