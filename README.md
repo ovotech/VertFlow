@@ -1,10 +1,10 @@
 <dl>
   <h1>
-        <div align=center><img src="https://storage.googleapis.com/vertflow/logo.png" alt="logo"/></div>
+        <div align=center><img src="https://github.com/ovotech/VertFlow/assets/68691153/7f3ba4c4-9768-4398-888b-fe9f4de6b51b" alt="logo"/></div>
     <div align=center>VertFlow</div>
   </h1>
   <p align="center"><i>Run Docker containers on Airflow using green energy</i></p>
-  <p align="center"><a href="https://drive.google.com/file/d/15XDWTu4kZfxE-SHAQcyMokr52gE_zGhv/view"><img src="https://storage.googleapis.com/vertflow/video_screenshot.png" width="358" height="201"  alt="Video Demo"/></a></p>
+  <p align="center"><a href="https://drive.google.com/file/d/15XDWTu4kZfxE-SHAQcyMokr52gE_zGhv/view"><img src="https://github.com/ovotech/VertFlow/assets/68691153/a99aa78a-cefc-453d-b115-964f6c2702db" width="358" height="201"  alt="Video Demo"/></a></p>
 </dl>
 
 ## 📖 About
