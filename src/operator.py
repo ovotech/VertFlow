@@ -15,14 +15,18 @@ limitations under the License.
 """
 
 import logging
+from datetime import datetime
 from typing import Sequence, Optional, List
 
-from .cloud_run import CloudRunJob, Secret, SecretType
-from .data import CloudRunRegions
 from airflow import AirflowException
 from airflow.models import BaseOperator, Variable
 from airflow.utils.context import Context
 from google.auth import default
+
+from .cloud_run import CloudRunJob, Secret, SecretType
+from .constants import AVERAGE_WATTS
+from .data import CloudRunRegions
+from .utils import to_g
 
 ENVIRONMENT_GCP_PROJECT: str = default()[1]
 
@@ -37,7 +41,7 @@ class VertFlowOperator(BaseOperator):
         arguments: Optional[List[str]] = None,
         project_id: Optional[str] = None,
         co2_signal_api_key: Optional[str] = None,
-        working_directory: str = None,
+        working_directory: Optional[str] = None,
         port_number: int = 8080,
         max_retries: int = 3,
         timeout_seconds: int = 300,
@@ -139,25 +143,29 @@ class VertFlowOperator(BaseOperator):
                                               `'-'     |_|                                      
         """
         logging.info(art)
-        logging.info("VertFlow is finding the greenest region for your Cloud Run Job.")
+        logging.info(
+            "🌱 VertFlow is finding the greenest region for your Cloud Run Job...\n"
+        )
         cloud_run_regions = CloudRunRegions(self.project_id, self.co2_signal_api_key)
 
         try:
             greenest = cloud_run_regions.greenest(self.allowed_regions)
             closest = cloud_run_regions.closest
 
-            saving = float(closest['carbon_intensity']) - float(greenest['carbon_intensity'])
-            if saving > 0:
-                outcome = f"{saving} gCO2eq/kWh less than"
-            elif saving < 0:
-                outcome = f"{saving} gCO2eq/kWh more than"
+            intensity_saving = float(closest["carbon_intensity"]) - float(
+                greenest["carbon_intensity"]
+            )
+            if intensity_saving > 0:
+                outcome = f"{intensity_saving} gCO2eq/kWh less than"
+            elif intensity_saving < 0:
+                outcome = f"{intensity_saving} gCO2eq/kWh more than"
             else:
                 outcome = "the same as"
 
             logging.info(
                 f"Deploying Cloud Run Job {self.name} in {greenest['name']} ({greenest['id']}) "
-                f"where carbon intensity is {greenest['carbon_intensity']} gCO2eq/kWh. "
-                f"This is {outcome} your closest region {closest['name']} ({closest['id']})."
+                f"where carbon intensity is {greenest['carbon_intensity']} gCO2eq/kWh.\n"
+                f"This is {outcome} your closest region {closest['name']} ({closest['id']}).\n"
             )
 
             greenest_region_id = str(greenest["id"])
@@ -171,6 +179,7 @@ class VertFlowOperator(BaseOperator):
             logging.warning(
                 f"Deploying Cloud Run Job {self.name} in region {greenest_region_id} as it was not possible to determine the greenest region:\n{repr(e)}"
             )
+            intensity_saving = 0.0
 
         self.job = CloudRunJob(
             greenest_region_id,
@@ -199,11 +208,31 @@ class VertFlowOperator(BaseOperator):
         )
 
         self.job.run()
-        execution = self.job.execution
-        logging.debug(f"Job run complete:\n{execution}")
-        if not self.job.executed_successfully:
+
+        if self.job.executed_successfully:
+            execution = self.job.execution
+            energy_used_kwh: float = (
+                (
+                    datetime.fromisoformat(
+                        str(execution["status"]["completionTime"]).replace("Z", "")  # type: ignore
+                    )
+                    - datetime.fromisoformat(
+                        str(execution["status"]["startTime"]).replace("Z", "")  # type: ignore
+                    )
+                ).total_seconds()
+                / 60
+                / 60
+                * (self.cpu_limit + to_g(self.memory_limit))
+                * AVERAGE_WATTS
+                / 1000
+            )
+            carbon_saving_grams = round(energy_used_kwh * intensity_saving, 3)
+            logging.info(
+                f"🎉 Job run complete. You saved {carbon_saving_grams}gCO2eq with VertFlow. Keep it up!"
+            )
+        else:
             raise AirflowException(
-                f"Cloud Run job failed. View execution logs at: {self.job.execution_log_uri}"
+                f"⚠️ Cloud Run job failed. View execution logs at: {self.job.execution_log_uri}"
             )
 
     def on_kill(self) -> None:

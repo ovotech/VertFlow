@@ -1,3 +1,4 @@
+import re
 from time import sleep
 from typing import Optional, Any, Callable
 
@@ -52,3 +53,21 @@ def intersection_equal(a: Optional[Any], b: Optional[Any]) -> bool:
             else:
                 equal = equal and intersection_equal(a[x], b[x])
     return equal
+
+
+def to_g(spec: str) -> float:
+    """Convert a value in G, M, Mi or Gi into G."""
+    match = re.match(r"([0-9]+)([a-z]+)", spec, re.I)
+    if match:
+        value, unit = match.groups()
+    else:
+        raise ValueError("Value wrongly formatted.")
+    if unit == "G":
+        g = float(value)
+    if unit == "M":
+        g = float(value) / 1000
+    if unit == "Mi":
+        g = float(value) * 0.001048576
+    if unit == "Gi":
+        g = float(value) * 0.931323
+    return g

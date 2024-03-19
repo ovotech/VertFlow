@@ -2,7 +2,7 @@ from time import time
 from typing import Optional
 from unittest import TestCase
 
-from src.utils import intersection_equal, wait_until
+from src.utils import intersection_equal, wait_until, to_g
 
 
 class TestWaitUntil(TestCase):
@@ -247,3 +247,11 @@ class TestIntersectionEqual(TestCase):
 
     def test_spec_sent_and_different_spec_received_are_not_equal(self) -> None:
         self.assertFalse(intersection_equal(self.spec_2_sent, self.spec_1_received))
+
+
+class TestToG(TestCase):
+    def test_to_g(self) -> None:
+        self.assertEqual(to_g("10G"), 10.0)
+        self.assertEqual(to_g("256M"), 0.256)
+        self.assertAlmostEqual(to_g("1024Mi"), 1.07, places=2)
+        self.assertAlmostEqual(to_g("2Gi"), 1.86, places=2)

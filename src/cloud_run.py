@@ -37,7 +37,7 @@ class SecretType(Enum):
 class Secret:
     """
     Reference a secret in Google Secret Manager and make it available within the Cloud Run container.
-    :param secret_manager_id: The fully-qualified ID/address of the Secret to be obtained from Secret Manager.
+    :param secret_manager_id: The name of the secret in Secret Manager
     :param secret_manager_version: The version of the secret to be pulled. Defaults to 'latest'.
     :param reference_as: Whether to reference the secret as an ENV_VAR or VOLUME.
     :param reference_at: The name of the environment variable, or mount path of the file.
@@ -113,7 +113,7 @@ class CloudRunJob:
         command: Optional[str],
         args: Optional[List[str]],
         environment_variables: dict,
-        working_directory: str,
+        working_directory: Optional[str],
         port_number: int,
         max_retries: int,
         timeout_seconds: int,
@@ -308,7 +308,7 @@ class CloudRunJob:
             )
 
     @property
-    def execution(self) -> Optional[dict]:
+    def execution(self) -> Optional[Dict[str, Any]]:
         """
         Get details of the most recent execution of the job.
         :return: A dictionary of execution metadata, or None if the job has not been executed since the local
